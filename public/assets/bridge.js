@@ -7,8 +7,8 @@
   ROOT.dataset.loaded='1';
   const HOST = new URL('../',document.currentScript && document.currentScript.src || location.href).href;
   const $ = id => document.getElementById(id);
-  let who='ghost',shot='side',ready=false,apiOK=false,booted=false;
-  ROOT.innerHTML = '<div id="iso-camera" class="ghost"><div id="igwHomeSlot"></div><div id="iso-camera-label">GHOST // SIDE CAMERA</div></div><div id="iso-overlay-shell"></div><div id="iso-diag">ISOCORE // HTML ACTIVE · CONNECTING</div>';
+  let who='ghost',shot='first',ready=false,apiOK=false,booted=false;
+  ROOT.innerHTML = '<div id="iso-camera" class="ghost"><div id="igwHomeSlot"></div><div id="iso-camera-label">GHOST // FIRST CAMERA</div></div><div id="iso-overlay-shell"></div><div id="iso-diag">ISOCORE // HTML ACTIVE · CONNECTING</div>';
   const diag=$('iso-diag');
   function scaleOverlay(){
     const el=$('iso-overlay-shell');if(!el)return;
@@ -24,16 +24,16 @@
   scaleOverlay();
   function status(message,error){diag.textContent=message;diag.classList.toggle('error',!!error);diag.hidden=false;}
   function script(path){return new Promise((resolve,reject)=>{
-    const s=document.createElement('script');s.src=HOST+path+'?v=8';s.crossOrigin='anonymous';
+    const s=document.createElement('script');s.src=HOST+path+'?v=9';s.crossOrigin='anonymous';
     s.onload=resolve;s.onerror=()=>reject(Error('External script blocked: '+path));document.head.appendChild(s);
   });}
-  function css(path){const l=document.createElement('link');l.rel='stylesheet';l.href=HOST+path+'?v=8';document.head.appendChild(l);}
+  function css(path){const l=document.createElement('link');l.rel='stylesheet';l.href=HOST+path+'?v=9';document.head.appendChild(l);}
   async function getState(){
     try{
       const resp=await fetch(HOST+'api/state',{cache:'no-store',credentials:'omit'});
       if(!resp.ok)throw Error('API '+resp.status);
       const value=await resp.json();apiOK=true;
-      const c=value.camera||{};who=c.who==='echo'?'echo':'ghost';shot=['first','shoulder','side','wide','high'].includes(c.shot)?c.shot:'side';
+      const c=value.camera||{};who=c.who==='echo'?'echo':'ghost';shot=['first','shoulder','side','wide','high'].includes(c.shot)?c.shot:'first';
       $('iso-camera').className=who;
       $('iso-camera-label').textContent=who.toUpperCase()+' // '+(shot==='high'?'JUMBOTRON':shot.toUpperCase())+' CAMERA';
       const st=$('ig-ghost-world');const engine=st&&st._igw;
