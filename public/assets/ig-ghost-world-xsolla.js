@@ -1312,7 +1312,7 @@
       if (filmCam) { camera.position.set(filmCam[0], filmCam[1], filmCam[2]); camera.lookAt(filmCam[3], filmCam[4], filmCam[5]); try { ['ghost', 'echo'].forEach(function (w) { if (ACT[w] && ACT[w].b && ACT[w].b.sp) ACT[w].b.sp.visible = false; }); spirit.rotation.y = Math.atan2(camera.position.x - currentPos.x, camera.position.z - currentPos.z); echoSpirit.rotation.y = Math.atan2(camera.position.x - echoPos.x, camera.position.z - echoPos.z); } catch (e) {} return; }
       if (inSuite) { var shot = shotOf(camShot); if (shot) {
         // first person: wide enough to take in all three rig screens, even on a phone held upright (about 100 degrees across)
-        var wantFov = camShot === 'first' ? Math.min(105, Math.max(60, 2 * Math.atan(Math.tan(50 * Math.PI / 180) / Math.max(.3, camera.aspect)) * 180 / Math.PI)) : (camera.aspect < .9 ? 70 : 55);
+        var wantFov = camShot === 'first' ? Math.min(105, Math.max(60, 2 * Math.atan(Math.tan(50 * Math.PI / 180) / Math.max(.3, camera.aspect)) * 180 / Math.PI)) : (camShot === 'side' ? (camera.aspect < .9 ? 63 : 49) : (camera.aspect < .9 ? 70 : 55));
         if (Math.abs(camera.fov - wantFov) > .5) { camera.fov = wantFov; camera.updateProjectionMatrix(); }
         camera.position.set(shot[0][0], shot[0][1], shot[0][2]); camera.lookAt(shot[1][0], shot[1][1], shot[1][2]); return; } }
       if (mode === 'walk') { var cq = Math.cos(ppitch), ey = EYE + bob + seatY + standY(); camera.position.set(player.x, ey, player.z); camera.lookAt(player.x + Math.sin(pyaw) * cq, ey + Math.sin(ppitch), player.z - Math.cos(pyaw) * cq); return; }
@@ -3472,7 +3472,7 @@
       var dx = Math.sin(su.yaw), dz = -Math.cos(su.yaw), px = -dz, pz = dx, e = su.seat, R = su.root.position;
       if (name === 'first') { var bk = su.back || 0; return [[e[0] - dx * bk, e[1] + .06, e[2] - dz * bk], [e[0] + dx * 4, e[1] - .35, e[2] + dz * 4]]; }
       if (name === 'shoulder') return [[e[0] - dx * 1.5 + px * .45, e[1] + .45, e[2] - dz * 1.5 + pz * .45], [R.x + dx * .6, e[1] - .15, R.z + dz * .6]];
-      if (name === 'side') return [[R.x + px * 2.6 - dx * .4, e[1] - .1, R.z + pz * 2.6 - dz * .4], [R.x, e[1] - .25, R.z]];
+      if (name === 'side') return [[R.x + px * 2.05 - dx * .3, e[1] + .12, R.z + pz * 2.05 - dz * .3], [R.x + dx * .12, e[1] - .05, R.z + dz * .12]];
       if (name === 'wide') return [[R.x * .25, 5.5, 15], [R.x * .8, 1.6, 0]];
       return [[0, 15.5, 9], [R.x * .55, 1.4, 0]];
     }
