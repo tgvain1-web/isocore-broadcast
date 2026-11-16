@@ -28,7 +28,14 @@ export function validCamera(v){return v && WHO.has(v.who) && SHOTS.has(v.shot);}
 function authorized(request,secret){const given=request.headers.get('authorization')||''; return !!secret && given.startsWith('Bearer ') && given.slice(7)===secret;}
 async function bodyJSON(request,max=2048){const text=await request.text();if(text.length>max)throw Error('Payload too large');return JSON.parse(text);}
 async function dbReady(env){return !!env.DB && !!await env.DB.prepare('SELECT id FROM camera WHERE id=1').first();}
-async function getCamera(db){return (await db.prepare('SELECT who, shot, updated_at FROM camera WHERE id=1').first()) || {who:'ghost',shot:'side',updated_at:0};}
+async function getCamera(db){
+  const c=(await db.prepare('SELECT who, shot, updated_at FROM camera WHERE id=1').first()) || {who:'ghost',shot:'first',updated_at:0};
+  // The initial V0.6 deployment stored 'side' with updated_at=0.
+  // Read that UNCHANGED bootstrap record as first person, without overriding
+  // subsequent intentional owner camera changes (which set updated_at).
+  if(c.shot==='side' && Number(c.updated_at)===0) return {...c,shot:'first'};
+  return c;
+}
 async function getTug(db){return (await db.prepare('SELECT * FROM tug WHERE id=1').first()) || {v:0,at:time(),n:0};}
 async function summary(db){const [camera,tug]=await Promise.all([getCamera(db),getTug(db)]);return {ok:true,camera:{who:camera.who,shot:camera.shot,updated_at:camera.updated_at},tug:stateOf(tug),chat:['igvain'],keyHuntMigrated:false};}
 async function tally(db,side,msgId,who){
