@@ -1,17 +1,40 @@
-# Isocore Broadcast — Cloudflare project
+# Isocore Broadcast — Cloudflare V0.6
 
-This repository is **separate from the working Discord authentication Worker** (`isocore-auth`). The main website and domain remain unchanged.
+✅ **Source upload complete.** The GitHub Actions installer automatically extracted and verified the full project files. The existing `isocore-auth` Worker and live InfinityFree website were not changed.
 
-## Install the project without a computer or terminal
+## Next: connect Cloudflare (phone-friendly; no terminal)
 
-1. Download both files from the ChatGPT conversation: `ISOCORE-BROADCAST-PART-1.zip` and `ISOCORE-BROADCAST-PART-2.zip`.
-2. In this repository, open **Add file → Upload files**.
-3. Upload **both ZIP files unchanged** to the **repository root** (not inside a folder), then tap **Commit changes**.
-4. The **Actions** tab should show **Install Isocore Broadcast project**. The workflow extracts and validates the package, commits its 85 files, and deletes the two temporary ZIPs. If only the first ZIP is uploaded initially, the workflow does nothing until the second is present.
-5. After the workflow is green, the full project files appear here, including `src/worker.mjs`, `wrangler.jsonc`, `public/`, and `migrations/`.
+### Step 1 — Create the broadcast database
 
-**This upload step does not deploy to Cloudflare.** Deployment requires a separate Cloudflare D1 database and account authentication, covered in `README-START-HERE.md` after extraction. Keep the existing `isocore-auth` deployment untouched.
+1. Open [Cloudflare dashboard](https://dash.cloudflare.com/) and choose your existing Cloudflare account.
+2. Find **Workers & Pages → D1 SQL Database** (some layouts show **Storage & databases → D1**).
+3. Select **Create database** and enter exactly `isocore-broadcast-db`.
+4. Copy the database's **Database ID** (a UUID). It is *not* an API token or secret.
+5. Return to the ChatGPT conversation and paste **only the Database ID**. The assistant can place it into this repository's `wrangler.jsonc` for you. **Do not paste any Cloudflare API tokens, Discord secrets or account passwords.**
 
-## Security
+### Step 2 — Connect GitHub to a separate Cloudflare Worker
 
-Do not upload secrets, Cloudflare API tokens, or Discord tokens to this repository or include them in screenshots. The new broadcast project needs a dedicated `CONTROL_TOKEN` secret when deployed.
+After `wrangler.jsonc` includes the database ID:
+
+1. In **Workers & Pages**, select **Create application → GitHub** and connect this repository: `tgvain1-web/isocore-broadcast`. If it is not listed, authorize the repository in GitHub's Cloudflare integration.
+2. The **Worker name must be `isocore-broadcast`** (different from existing `isocore-auth`). Branch: `main`.
+3. Deploy command: `npx wrangler deploy`. No custom build command is needed.
+4. Select **Save and Deploy**.
+
+### Step 3 — Database migrations and owner controls
+
+The D1 database must have the SQL schema applied before `/api/health` can succeed. Apply `migrations/0001_init.sql` via Cloudflare D1's **Console**, or use Wrangler's D1 migration command in the repo's README-START-HERE.md. A private `CONTROL_TOKEN` Worker secret (32+ random characters) is required before owner camera controls work.
+
+No permanent domain change, DNS change, or `isocore-auth` modification is required.
+
+### Step 4 — Verify the broadcast
+
+Once deployed, visit the Cloudflare-provided Worker URL:
+- `/api/health` — database readiness
+- `/preview.html` — live arena preview
+- `/control.html` — private Ghost/Echo camera controls
+- `/xsolla-setup.html` — Xsolla Code layer integration code
+
+The Xsolla renderer and Twitch EventSub voting still require real-world testing and setup. The PS5-to-Twitch relay and Lightstream watermark are separate and not fixed by this hosting move.
+
+For technical details see [README-START-HERE.md](README-START-HERE.md).
