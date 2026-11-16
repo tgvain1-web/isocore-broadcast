@@ -1,0 +1,3 @@
+/* ISOCORE Xsolla Code layer: keep the entire stream canvas transparent. The exact original overlay CSS loads from Cloudflare. */
+html,body{margin:0!important;background:transparent!important;overflow:hidden!important}
+#isocore-broadcast{position:fixed!important;inset:0!important;overflow:hidden!important;pointer-events:none!important;z-index:9999!important;background:transparent!important}

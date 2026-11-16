@@ -1,0 +1,6 @@
+/assets/*
+  Access-Control-Allow-Origin: *
+  Cross-Origin-Resource-Policy: cross-origin
+  X-Content-Type-Options: nosniff
+/*.html
+  X-Robots-Tag: noindex, nofollow

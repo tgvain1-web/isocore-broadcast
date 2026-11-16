@@ -1,0 +1,26 @@
+/* The stream overlay (overlay.php, README-ADMIN 284). Transparent; 1920 x 1080. Ghost cyan #00d4ff, Echo orange, white and grey. */
+html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: transparent; }
+.ov { position: relative; width: 1920px; height: 1080px; font-family: "Segoe UI", Arial, sans-serif; color: #fff; }
+.ov-tug { position: absolute; top: 26px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 18px; padding: 12px 20px; border-radius: 14px; background: rgba(5, 10, 18, .78); border: 1px solid rgba(255, 255, 255, .12); box-shadow: 0 8px 30px rgba(0, 0, 0, .45); }
+.ov-tug-label { white-space: nowrap; display: flex; flex-direction: column; font-size: 15px; letter-spacing: .14em; line-height: 1.2; }
+.ov-tug-label b { font-size: 20px; font-weight: 900; }
+.ov-tug-label span { color: #b9c6d2; font-weight: 700; }
+.ov-g b { color: #00d4ff; text-shadow: 0 0 14px rgba(0, 212, 255, .6); }
+.ov-e { text-align: right; }
+.ov-e b { color: #ff9a2e; text-shadow: 0 0 14px rgba(255, 154, 46, .6); }
+.ov-tug-bar { position: relative; width: 640px; height: 22px; border-radius: 11px; background: linear-gradient(90deg, rgba(0, 212, 255, .18), rgba(255, 255, 255, .06) 50%, rgba(255, 154, 46, .18)); overflow: hidden; border: 1px solid rgba(255, 255, 255, .18); }
+.ov-tug-fill { position: absolute; top: 0; bottom: 0; left: 50%; width: 0; transition: left .6s ease, width .6s ease, background .6s; }
+.ov-tug-mid { position: absolute; left: 50%; top: -2px; bottom: -2px; width: 2px; background: rgba(255, 255, 255, .6); }
+.ov-tug-mark { position: absolute; top: 50%; left: 50%; width: 30px; height: 30px; margin: -15px 0 0 -15px; border-radius: 50%; background: #fff; box-shadow: 0 0 18px #fff; transition: left .6s ease, box-shadow .6s; }
+.ov-alert { position: absolute; top: 130px; left: 50%; transform: translateX(-50%); max-width: 1200px; padding: 18px 34px; border-radius: 12px; background: rgba(5, 10, 18, .9); border: 2px solid #00d4ff; font-size: 34px; font-weight: 800; text-align: center; box-shadow: 0 0 40px rgba(0, 212, 255, .35); animation: ovInC .4s ease-out; }
+.ov-say { position: absolute; top: 120px; max-width: 460px; padding: 14px 20px; border-radius: 12px; background: rgba(5, 10, 18, .88); font-size: 24px; font-weight: 700; animation: ovIn .4s ease-out; }
+.ov-say::before { display: block; font-size: 14px; letter-spacing: .16em; margin-bottom: 4px; }
+.ov-say-g { left: 40px; border-left: 4px solid #00d4ff; }
+.ov-say-g::before { content: "GHOST"; color: #00d4ff; }
+.ov-say-e { right: 40px; border-right: 4px solid #ff9a2e; text-align: right; }
+.ov-say-e::before { content: "ECHO"; color: #ff9a2e; }
+.ov-core { position: absolute; left: 40px; bottom: 74px; max-width: 900px; padding: 12px 18px; border-radius: 8px; background: rgba(3, 9, 20, .88); border: 1px solid rgba(79, 168, 255, .6); font: 600 22px/1.35 Consolas, "Courier New", monospace; color: #dcefff; animation: ovIn .3s ease-out; }
+.ov-core b { color: #6fb8ff; }
+.ov-foot { position: absolute; left: 40px; right: 40px; bottom: 22px; display: flex; justify-content: space-between; font-size: 18px; font-weight: 700; letter-spacing: .1em; color: #c9d6e0; text-shadow: 0 2px 6px rgba(0, 0, 0, .8); }
+@keyframes ovIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; } }
+@keyframes ovInC { from { opacity: 0; transform: translate(-50%, -10px); } to { opacity: 1; transform: translate(-50%, 0); } }

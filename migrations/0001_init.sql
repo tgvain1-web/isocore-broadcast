@@ -1,0 +1,6 @@
+CREATE TABLE IF NOT EXISTS camera (id INTEGER PRIMARY KEY CHECK(id=1), who TEXT NOT NULL CHECK(who IN('ghost','echo')), shot TEXT NOT NULL CHECK(shot IN('first','shoulder','side','wide','high')), updated_at INTEGER NOT NULL);
+INSERT OR IGNORE INTO camera (id, who, shot, updated_at) VALUES (1, 'ghost', 'side', 0);
+CREATE TABLE IF NOT EXISTS tug (id INTEGER PRIMARY KEY CHECK(id=1), v REAL NOT NULL DEFAULT 0, at INTEGER NOT NULL DEFAULT 0, n INTEGER NOT NULL DEFAULT 0, revision INTEGER NOT NULL DEFAULT 0, reset_at INTEGER NOT NULL DEFAULT 0, alert_text TEXT NOT NULL DEFAULT '', alert_at INTEGER NOT NULL DEFAULT 0);
+INSERT OR IGNORE INTO tug (id,v,at,n,revision) VALUES (1,0,0,0,0);
+CREATE TABLE IF NOT EXISTS tug_votes (id TEXT PRIMARY KEY, who TEXT NOT NULL, side TEXT NOT NULL, at INTEGER NOT NULL);
+CREATE INDEX IF NOT EXISTS idx_tug_votes_who_at ON tug_votes(who,at DESC);

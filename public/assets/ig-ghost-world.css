@@ -1,0 +1,386 @@
+/* IG-Ghost's town: a self-contained 3D diorama, with a static fallback. */
+.igw-wrap .igw-world{position:relative;isolation:isolate;overflow:hidden;width:100%;height:clamp(420px,52vw,680px);border:1px solid #294b5c;border-radius:8px;background:radial-gradient(ellipse at 50% 46%,#16305a 0%,#081329 55%,#050a16 100%);outline-offset:4px;touch-action:pan-y}
+.igw-wrap .igw-world:focus-visible{outline:2px solid #64d5ff}
+.igw-wrap .igw-canvas{position:absolute;inset:0;display:block;width:100%;height:100%;opacity:0;transition:opacity .35s ease}
+.igw-wrap .igw-world.is-live .igw-canvas{opacity:1}
+.igw-wrap .igw-hud{position:absolute;z-index:2;inset:20px 22px auto;display:flex;justify-content:space-between;align-items:center;gap:1rem;pointer-events:none;color:#c8e5f0;font:600 10px/1.5 var(--sans,system-ui,sans-serif);letter-spacing:.13em;text-transform:uppercase}
+.igw-wrap .igw-hud span:last-child{color:#8fb1c1;font-weight:500;letter-spacing:.06em;text-align:right}
+.igw-wrap .igw-fallback{position:absolute;inset:0;display:grid;place-items:center;transition:opacity .25s;pointer-events:none}
+.igw-wrap .igw-world.is-live .igw-fallback{opacity:0;visibility:hidden}
+.igw-wrap .igw-fallback::before{content:"";position:absolute;width:min(63%,320px);aspect-ratio:1;border:1px solid #2b5369;border-radius:50%;box-shadow:0 0 0 34px #102b3a88,0 0 0 35px #264758,0 0 80px #1c7ba53a}
+.igw-wrap .igw-fallback-ghost{position:relative;width:150px;height:146px;background:url(core-emblem.webp) center/contain no-repeat;filter:drop-shadow(0 0 34px #2f9bff88);transform:translateY(-8px)}
+.igw-wrap .igw-fallback-ghost i{display:none}
+.igw-wrap .igw-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:12px 0 0}
+.igw-wrap .igw-control{min-height:42px;padding:0 15px;border:1px solid #38586b;border-radius:4px;background:#0d202e;color:#d8eaf2;font:600 12px/1.3 var(--sans,system-ui,sans-serif);cursor:pointer}
+.igw-wrap .igw-control:hover{border-color:#64d5ff;color:#fff}.igw-wrap .igw-control:focus-visible{outline:2px solid #64d5ff;outline-offset:3px}
+.igw-wrap #igw-help{margin:0 0 0 auto;color:#91acba;font:400 11px/1.4 var(--sans,system-ui,sans-serif)}
+.igw-wrap .igw-screenreader{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+@media(max-width:700px){.igw-wrap .igw-world{height:440px}.igw-wrap .igw-hud{inset:15px 16px auto;font-size:9px}.igw-wrap #igw-help{flex-basis:100%;margin:4px 0 0}}
+@media(max-width:370px){.igw-wrap .igw-world{height:400px}.igw-wrap .igw-control{padding:0 10px}}
+@media(prefers-reduced-motion:reduce){.igw-wrap .igw-canvas,.igw-wrap .igw-fallback{transition:none}}
+
+/* Home is the town and nothing else: from the header to the footer, edge to edge. */
+.hero.view.igw-homeview{padding:0;margin:0;min-height:0;max-width:none;background:none}
+.igw-home{max-width:none;margin:0;padding:0;text-align:left}
+.igw-home .igw-world{height:calc(100vh - var(--igw-top,84px));height:calc(100dvh - var(--igw-top,84px));min-height:420px;border:0;border-radius:0}
+.igw-home:not(:has(.igw-wrap)){display:none}
+/* No buttons under the town: everything is done by tapping or clicking in it. They are still there for a keyboard, and show when one reaches them. */
+.igw-wrap{position:relative}
+.igw-wrap .igw-controls{position:absolute;z-index:3;left:12px;bottom:12px;margin:0;max-width:calc(100% - 24px);clip-path:inset(50%);width:1px;height:1px;overflow:hidden;white-space:nowrap}
+.igw-wrap .igw-controls:focus-within{clip-path:none;width:auto;height:auto;overflow:visible;white-space:normal;padding:8px;border:1px solid #2c5870;border-radius:6px;background:#07131ef2}
+.igw-wrap .igw-controls #igw-help{display:none}
+.igw-wrap .igw-tip{position:absolute;z-index:2;left:50%;top:52px;transform:translateX(-50%);max-width:calc(100% - 32px);padding:8px 14px;border:1px solid #2c5870;border-radius:999px;background:#07131ecc;color:#e4f5fc;font:600 12px/1.3 var(--sans,system-ui,sans-serif);text-align:center;pointer-events:none}
+.igw-wrap .igw-tip:empty{display:none}
+.igw-wrap .igw-cross{position:absolute;z-index:2;left:50%;top:50%;width:6px;height:6px;margin:-3px 0 0 -3px;border-radius:50%;background:#e4f5fc88;pointer-events:none}
+.igw-wrap .igw-world:not(.is-walk) .igw-cross{display:none}
+/* the little stick in the corner on a touch screen: up and down walk, left and right turn */
+.igw-wrap .igw-stick{position:absolute;z-index:3;left:18px;bottom:18px;width:104px;height:104px;border:1px solid #3b6d88;border-radius:50%;background:#07131e99;touch-action:none;-webkit-user-select:none;user-select:none}
+.igw-wrap .igw-stick i{position:absolute;left:50%;top:50%;width:44px;height:44px;margin:-22px 0 0 -22px;border-radius:50%;background:#64d5ffcc;box-shadow:0 0 14px #2f9bff88}
+.igw-wrap .igw-world:not(.is-walk) .igw-stick,.igw-wrap .igw-world:not(.is-live) .igw-stick{display:none}
+.igw-wrap .igw-stick-look{left:auto;right:18px}
+.igw-wrap .igw-stick-look i{background:#ffd58acc;box-shadow:0 0 14px #ffb45e88}
+/* going in: the town becomes a terminal for a moment */
+.igw-wrap .igw-portal{position:absolute;inset:0;z-index:6;display:grid;place-items:center;pointer-events:none;background:radial-gradient(circle at 50% 50%,rgba(7,19,30,.2),rgba(3,7,14,.92) 70%);animation:igw-portal-in .62s ease-out both}
+.igw-wrap .igw-portal::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(100,213,255,.07) 0 1px,transparent 1px 3px)}
+.igw-wrap .igw-portal-box{position:relative;min-width:min(78%,420px);padding:18px 20px;border:1px solid #2c8fbf;border-radius:4px;background:#04101acc;box-shadow:0 0 40px rgba(47,155,255,.35);font:600 14px/1.5 ui-monospace,Menlo,Consolas,monospace;color:#bfeeff;letter-spacing:.06em}
+.igw-wrap .igw-portal-box b{display:block;font-weight:700;white-space:nowrap;overflow:hidden;border-right:2px solid #64d5ff;width:0;animation:igw-type .42s steps(24) .05s forwards}
+.igw-wrap .igw-portal-box i{display:block;height:3px;margin:12px 0 8px;background:linear-gradient(90deg,#64d5ff,#2f9bff) 0 0/0 100% no-repeat,#123448;animation:igw-bar .55s ease-out .05s forwards}
+.igw-wrap .igw-portal-box span{font-size:11px;color:#6f9fb4}
+@keyframes igw-portal-in{0%{opacity:0;backdrop-filter:blur(0)}40%{opacity:1}100%{opacity:1;backdrop-filter:blur(3px)}}
+@keyframes igw-type{to{width:100%}}
+@keyframes igw-bar{to{background-size:100% 100%,auto}}
+html.igw-entering .igw-wrap .igw-canvas{transform:scale(1.08);filter:brightness(1.4) blur(1px);transition:transform .6s ease-in,filter .6s ease-in}
+/* his mood, in the corner of the town */
+.igw-wrap .igw-mood{display:block;margin-top:4px;font:600 10px/1.2 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.12em;text-transform:uppercase;color:#9fd8ee}
+.igw-wrap .igw-mood:empty{display:none}
+/* ---- the game HUD: his card, the map, the help button and the controls guide */
+.igw-wrap .igw-ui{position:absolute;inset:0;z-index:4;pointer-events:none;font-family:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace}
+.igw-wrap .igw-ui>*{pointer-events:auto}
+.igw-wrap .igw-card{position:absolute;left:14px;top:14px;width:228px;padding:10px 12px;border:1px solid #2c6f93;border-radius:6px;background:linear-gradient(180deg,rgba(7,19,32,.9),rgba(4,11,20,.86));box-shadow:0 0 0 1px rgba(100,213,255,.08),0 0 28px rgba(47,155,255,.18);color:#d9eef8;backdrop-filter:blur(6px)}
+.igw-wrap .igw-card::before{content:"";position:absolute;left:-1px;top:-1px;width:14px;height:14px;border-left:2px solid #64d5ff;border-top:2px solid #64d5ff}
+.igw-wrap .igw-card-top{display:flex;align-items:center;gap:10px}
+.igw-wrap .igw-card-face{flex:0 0 38px;height:38px;background:url(core-emblem.webp) center/contain no-repeat;filter:drop-shadow(0 0 8px #2f9bffaa)}
+.igw-wrap .igw-card-name{display:block;font:700 14px/1.1 inherit;letter-spacing:.06em;color:#fff}
+.igw-wrap .igw-card-lvl{display:inline-block;margin-top:3px;padding:1px 6px;border:1px solid #64d5ff;border-radius:3px;font-size:10px;letter-spacing:.12em;color:#64d5ff}
+.igw-wrap .igw-xp{height:4px;margin:8px 0 6px;border-radius:2px;background:#123448;overflow:hidden}
+.igw-wrap .igw-xp i{display:block;height:100%;background:linear-gradient(90deg,#2f9bff,#64d5ff);box-shadow:0 0 8px #64d5ff}
+.igw-wrap .igw-card-where,.igw-wrap .igw-card .igw-mood{display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#8fc8de;margin-top:2px}
+.igw-wrap .igw-card .igw-activity{font:inherit;color:inherit}
+.igw-wrap .igw-stats{display:none;grid-template-columns:1fr auto;gap:3px 10px;margin:8px 0 2px;font-size:11px}
+.igw-wrap .igw-card.is-open .igw-stats{display:grid}
+.igw-wrap .igw-stats dt{color:#8fb7c8}.igw-wrap .igw-stats dd{margin:0;text-align:right;color:#fff;font-weight:700}
+.igw-wrap .igw-card.is-open .igw-stats{gap:4px 0}
+.igw-wrap .igw-card.is-open .igw-stats dt,.igw-wrap .igw-card.is-open .igw-stats dd{min-height:26px;display:flex;align-items:center;box-sizing:border-box;background:#102b3b;border-block:1px solid #244e62}
+.igw-wrap .igw-card.is-open .igw-stats dt{padding:4px 7px;border-left:1px solid #244e62;border-radius:4px 0 0 4px;line-height:1.2}
+.igw-wrap .igw-card.is-open .igw-stats dd{justify-content:flex-end;padding:4px 8px;border-right:1px solid #244e62;border-radius:0 4px 4px 0;color:#e8f8ff}
+.igw-wrap .igw-card.is-echo.is-open .igw-stats dt,.igw-wrap .igw-card.is-echo.is-open .igw-stats dd{background:#332116;border-color:#704022}
+.igw-wrap .igw-stats-note{grid-column:1/-1;margin:4px 0 0;font-size:9.5px;line-height:1.4;color:#6f9fb4;font-family:system-ui,sans-serif}
+.igw-wrap .igw-card-more{margin-top:6px;min-height:28px;padding:0 10px;border:1px solid #2c6f93;border-radius:4px;background:#0b2233;color:#bfeeff;font:600 10px/1 inherit;letter-spacing:.12em;text-transform:uppercase;cursor:pointer}
+.igw-wrap .igw-map{position:absolute;right:14px;top:14px;padding:4px;border-radius:50%;cursor:pointer;filter:drop-shadow(0 0 14px rgba(47,155,255,.35))}
+.igw-wrap .igw-map canvas{display:block;border-radius:50%}
+.igw-wrap .igw-map-label{position:absolute;left:50%;bottom:-3px;transform:translateX(-50%);white-space:nowrap;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#8fc8de}
+.igw-wrap .igw-map.is-big{right:50%;top:50%;transform:translate(50%,-50%);z-index:6;padding:10px;border:1px solid #2c6f93;border-radius:12px;background:rgba(4,11,20,.9)}
+.igw-wrap .igw-map.is-big canvas{border-radius:8px}
+.igw-wrap .igw-map.is-big .igw-map-label{bottom:-22px;font-size:11px}
+/* Keep the handover's original map footprint. A native destination selector
+   sits on top of the map, avoiding crowded labels and oversized panels. */
+.igw-wrap .igw-map-head[hidden],.igw-wrap .igw-map-choices[hidden]{display:none!important}
+.igw-wrap .igw-map canvas:focus-visible{outline:2px solid #64d5ff;outline-offset:3px}
+.igw-wrap .igw-map.is-big{box-sizing:content-box;max-width:calc(100% - 24px);overflow:visible;padding:10px;cursor:auto}
+.igw-wrap .igw-map.is-big canvas{display:block;max-width:100%;height:auto!important}
+.igw-wrap .igw-map.is-big .igw-map-label{display:none}
+.igw-wrap .igw-map-head{position:absolute;z-index:1;top:12px;left:12px;right:12px;display:flex;align-items:center;justify-content:space-between;gap:10px;color:#eef8fc;font:700 13px/1.3 system-ui,sans-serif;pointer-events:none}
+.igw-wrap .igw-map-head strong{padding:6px 9px;border-radius:4px;background:rgba(4,11,20,.88)}
+.igw-wrap .igw-map-close,.igw-wrap .igw-map-choices{min-height:44px;border:1px solid #52798b;border-radius:5px;background:#102535;color:#e9f5fa;font:600 13px/1.35 system-ui,sans-serif;cursor:pointer}
+.igw-wrap .igw-map-close{padding:0 12px;pointer-events:auto}
+.igw-wrap .igw-map-choices{position:absolute;z-index:1;left:12px;bottom:12px;width:calc(100% - 24px);padding:0 10px}
+.igw-wrap .igw-map-close:hover,.igw-wrap .igw-map-choices:hover{border-color:#64d5ff;background:#183a4d}
+.igw-wrap .igw-map-close:focus-visible,.igw-wrap .igw-map-choices:focus-visible{outline:2px solid #64d5ff;outline-offset:2px}
+.igw-wrap .igw-help-btn{position:absolute;right:20px;top:168px;width:36px;height:36px;border:1px solid #2c6f93;border-radius:50%;background:rgba(7,19,32,.88);color:#bfeeff;font:700 16px/1 inherit;cursor:pointer}
+.igw-wrap .igw-help-btn:hover,.igw-wrap .igw-card-more:hover{border-color:#64d5ff;color:#fff}
+.igw-wrap .igw-guide{position:absolute;z-index:7;left:50%;top:50%;transform:translate(-50%,-50%);width:min(440px,calc(100% - 28px));max-height:calc(100% - 28px);overflow:auto;padding:16px 18px;border:1px solid #2c8fbf;border-radius:8px;background:rgba(4,12,22,.95);box-shadow:0 0 50px rgba(47,155,255,.3);color:#d9eef8;font-family:ui-monospace,Menlo,Consolas,monospace}
+.igw-wrap .igw-guide-head{display:flex;align-items:center;justify-content:space-between;font-size:13px;letter-spacing:.14em;color:#64d5ff}
+.igw-wrap .igw-guide-x{width:36px;height:36px;border:0;background:none;color:#bfeeff;font-size:22px;cursor:pointer}
+.igw-wrap .igw-guide-tabs{display:flex;gap:6px;margin:10px 0}
+.igw-wrap .igw-guide-tabs button{flex:1;min-height:36px;border:1px solid #2c6f93;border-radius:4px;background:#0b2233;color:#9fc8da;font:600 11px/1.2 inherit;letter-spacing:.06em;cursor:pointer}
+.igw-wrap .igw-guide-tabs button.is-on{border-color:#64d5ff;background:#123d56;color:#fff}
+.igw-wrap .igw-guide-list{display:grid;grid-template-columns:auto 1fr;gap:8px 14px;margin:6px 0 12px;font-size:12px;line-height:1.4}
+.igw-wrap .igw-guide-list dt{color:#ffd58a;font-weight:700;white-space:nowrap}.igw-wrap .igw-guide-list dd{margin:0;color:#d9eef8;font-family:system-ui,sans-serif}
+.igw-wrap .igw-guide-note{margin:0 0 12px;font:12px/1.5 system-ui,sans-serif;color:#8fb7c8}
+.igw-wrap .igw-guide-go{width:100%;min-height:42px;border:1px solid #64d5ff;border-radius:4px;background:linear-gradient(180deg,#1a6f9c,#0f4a6b);color:#fff;font:700 12px/1 inherit;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;box-shadow:0 0 18px rgba(47,155,255,.35)}
+.igw-wrap .igw-world.igw-guide-open .igw-stick{opacity:.3}
+@media(max-width:600px){.igw-wrap .igw-card{width:170px;padding:8px 9px;left:10px;top:10px}.igw-wrap .igw-card-face{flex-basis:30px;height:30px}.igw-wrap .igw-card-name{font-size:12px}.igw-wrap .igw-map{right:10px;top:10px}.igw-wrap .igw-help-btn{right:14px;top:156px}.igw-wrap .igw-guide-list{font-size:11.5px}}
+.igw-wrap .igw-tip{top:auto;bottom:140px}
+@media(min-width:601px){.igw-wrap .igw-tip{bottom:24px}}
+/* ---- Echo's card, the argument ticker, the clan counter and the recovered log */
+.igw-wrap .igw-card-tabs{display:flex;gap:4px;margin:-2px 0 8px}
+.igw-wrap .igw-card-tabs button{flex:1;min-height:26px;border:1px solid #2c6f93;border-radius:3px;background:#0b2233;color:#8fc8de;font:700 10px/1 ui-monospace,Menlo,monospace;letter-spacing:.14em;cursor:pointer}
+.igw-wrap .igw-card-tabs button.is-on{background:#123d56;color:#fff;border-color:#64d5ff}
+.igw-wrap .igw-card-tabs button:last-child.is-on{background:#4a2410;border-color:#ff9a4a}
+.igw-wrap .igw-card.is-echo{border-color:#a8501c;box-shadow:0 0 0 1px rgba(255,154,74,.1),0 0 28px rgba(255,120,40,.2)}
+.igw-wrap .igw-card.is-echo::before{border-color:#ff9a4a}
+.igw-wrap .igw-card.is-echo .igw-card-face{filter:drop-shadow(0 0 8px #ff8a3aaa) hue-rotate(170deg) saturate(1.6)}
+.igw-wrap .igw-card.is-echo .igw-card-lvl{border-color:#ff9a4a;color:#ff9a4a}
+.igw-wrap .igw-card.is-echo .igw-xp i{background:linear-gradient(90deg,#d8501c,#ff9a4a);box-shadow:0 0 8px #ff9a4a}
+.igw-wrap .igw-ticker{position:absolute;left:14px;top:auto;bottom:24px;max-width:min(420px,calc(100% - 220px));padding:7px 11px;border-left:3px solid #64d5ff;background:rgba(4,11,20,.8);color:#d9eef8;font:12px/1.4 system-ui,sans-serif;border-radius:0 4px 4px 0}
+.igw-wrap .igw-ticker b{font:700 10px/1 ui-monospace,Menlo,monospace;letter-spacing:.14em;margin-right:6px}
+.igw-wrap .igw-ticker-ghost{color:#64d5ff}.igw-wrap .igw-ticker-echo{color:#ff9a4a}
+.igw-wrap .igw-counter{position:absolute;right:14px;top:172px;display:flex;gap:2px;border:1px solid #2c6f93;border-radius:4px;background:rgba(4,11,20,.84);overflow:hidden}
+.igw-wrap .igw-counter span{display:flex;flex-direction:column;align-items:center;padding:4px 8px;border-right:1px solid #1d4a62}
+.igw-wrap .igw-counter span:last-child{border-right:0}
+.igw-wrap .igw-counter i{font:600 8px/1.2 ui-monospace,Menlo,monospace;letter-spacing:.12em;color:#7fa8ba;font-style:normal}
+.igw-wrap .igw-counter b{font:700 13px/1.3 ui-monospace,Menlo,monospace;color:#fff}
+.igw-wrap .igw-help-btn{top:222px}
+.igw-wrap .igw-sound-btn{position:absolute;right:64px;top:222px;min-height:36px;padding:0 11px;border:1px solid #2c6f93;border-radius:18px;background:rgba(7,19,32,.9);color:#bfeeff;font:600 11px/1.2 system-ui,sans-serif;cursor:pointer}
+.igw-wrap .igw-sound-btn:hover,.igw-wrap .igw-sound-btn[aria-pressed=true]{border-color:#64d5ff;color:#fff}
+.igw-wrap .igw-sound-btn:focus-visible{outline:2px solid #64d5ff;outline-offset:3px}
+.igw-wrap .igw-sound-btn:disabled{opacity:.7;cursor:default}
+.igw-wrap .igw-night-btn{position:absolute;right:20px;top:268px;min-height:38px;padding:0 13px;border:1px solid #2c6f93;border-radius:20px;background:rgba(7,19,32,.9);color:#d9eef8;font:600 11px/1.2 system-ui,sans-serif;cursor:pointer}
+.igw-wrap .igw-gate-btn{position:absolute;right:125px;top:268px;min-height:38px;padding:0 13px;border:1px solid #2c6f93;border-radius:20px;background:rgba(7,19,32,.9);color:#d9eef8;font:600 11px/1.2 system-ui,sans-serif;cursor:pointer}
+.igw-wrap .igw-gate-btn:hover{border-color:#64d5ff;color:#fff}
+.igw-wrap .igw-gate-btn:focus-visible{outline:2px solid #64d5ff;outline-offset:3px}
+.igw-wrap .igw-night-btn:hover{border-color:#64d5ff;color:#fff}
+.igw-wrap .igw-night-btn:focus-visible,.igw-wrap .igw-night-close:focus-visible{outline:2px solid #64d5ff;outline-offset:3px}
+.igw-wrap .igw-night[hidden]{display:none}
+.igw-wrap .igw-night{position:absolute;z-index:9;left:50%;top:50%;transform:translate(-50%,-50%);box-sizing:border-box;width:min(360px,calc(100% - 32px));padding:20px;border:1px solid #2c8fbf;border-radius:8px;background:#07131ef5;color:#e4f5fc;box-shadow:0 12px 38px #0009;font:14px/1.5 system-ui,sans-serif}
+.igw-wrap .igw-night strong{color:#64d5ff;font-size:12px;letter-spacing:.12em}
+.igw-wrap .igw-night-close{float:right;min-height:40px;padding:0 12px;border:1px solid #52798b;border-radius:4px;background:#102535;color:#e9f5fa;cursor:pointer}
+.igw-wrap .igw-night-when{clear:both;padding-top:12px;margin:0;font-size:21px;font-weight:700}
+.igw-wrap .igw-night-note{margin:8px 0 0;color:#abc5d1}
+.igw-wrap .igw-pod-dialog[hidden]{display:none}
+.igw-wrap .igw-pod-dialog{position:absolute;z-index:9;left:50%;top:50%;transform:translate(-50%,-50%);box-sizing:border-box;width:min(400px,calc(100% - 32px));max-height:calc(100% - 32px);overflow:auto;padding:20px;border:1px solid #2c8fbf;border-radius:8px;background:#07131ef7;color:#e4f5fc;box-shadow:0 12px 38px #0009;font:14px/1.5 system-ui,sans-serif}
+.igw-wrap .igw-pod-head{display:flex;align-items:center;justify-content:space-between;gap:12px;color:#64d5ff;font-size:12px;letter-spacing:.12em}
+.igw-wrap .igw-pod-close{min-height:40px;padding:0 12px;border:1px solid #52798b;border-radius:4px;background:#102535;color:#e9f5fa;cursor:pointer}
+.igw-wrap .igw-pod-identity{display:flex;align-items:center;gap:14px;margin:20px 0 14px}
+.igw-wrap .igw-pod-avatar{width:68px;height:68px;object-fit:cover;border:1px solid #5791a8;border-radius:8px;background:#102535}
+.igw-wrap .igw-pod-side{color:#87c8df;font-size:11px;font-weight:700;letter-spacing:.12em}
+.igw-wrap .igw-pod-identity h2{margin:2px 0;color:#fff;font-size:23px;line-height:1.2;overflow-wrap:anywhere}
+.igw-wrap .igw-pod-stats{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px}
+.igw-wrap .igw-pod-stats span{padding:5px 8px;border:1px solid #2c5870;border-radius:4px;background:#102535;color:#dceef6;font-size:12px}
+.igw-wrap .igw-pod-link{display:inline-flex;align-items:center;min-height:42px;padding:0 14px;border-radius:4px;background:#086caa;color:#fff;text-decoration:none;font-weight:700}
+.igw-wrap .igw-pod-link:focus-visible,.igw-wrap .igw-pod-close:focus-visible{outline:2px solid #64d5ff;outline-offset:3px}
+/* A single vertical action stack keeps the map controls aligned. */
+.igw-wrap .igw-hud-actions{position:absolute;right:14px;top:171px;display:flex;flex-direction:column;align-items:stretch;gap:4px;width:116px}
+.igw-wrap .igw-counter{right:140px;top:171px}
+.igw-wrap .igw-hud-actions>button{position:static;box-sizing:border-box;min-height:38px;width:100%;height:auto;margin:0;padding:0 10px;border:1px solid #2c6f93;border-radius:6px;background:rgba(7,19,32,.9);color:#d9eef8;font:600 11px/1.2 system-ui,sans-serif;cursor:pointer}
+.igw-wrap .igw-hud-actions>button:hover,.igw-wrap .igw-hud-actions>button[aria-pressed=true]{border-color:#64d5ff;color:#fff}
+.igw-wrap .igw-hud-actions>button:focus-visible{outline:2px solid #64d5ff;outline-offset:2px}
+@media(max-height:560px){.igw-wrap .igw-hud-actions{top:158px;gap:2px}.igw-wrap .igw-counter{top:158px}.igw-wrap .igw-hud-actions>button{min-height:32px}}
+.igw-wrap .igw-lore{position:absolute;z-index:7;left:50%;top:50%;transform:translate(-50%,-50%);width:min(520px,calc(100% - 28px));max-height:calc(100% - 28px);overflow:auto;padding:16px 18px;border:1px solid #c0393b;border-radius:6px;background:rgba(14,3,5,.95);box-shadow:0 0 50px rgba(255,59,59,.25);color:#ffd9d9;font:12px/1.6 ui-monospace,Menlo,Consolas,monospace}
+.igw-wrap .igw-lore b{display:block;color:#ff6b6b;letter-spacing:.12em;margin-bottom:8px}
+.igw-wrap .igw-lore pre{margin:0 0 12px;white-space:pre-wrap;font:inherit}
+@media(max-width:600px){.igw-wrap .igw-tip{bottom:196px}.igw-wrap .igw-ticker{left:10px;right:10px;max-width:none;bottom:136px;font-size:11px}.igw-wrap .igw-counter{right:10px;top:160px}.igw-wrap .igw-help-btn{top:206px;right:14px}.igw-wrap .igw-counter span{padding:3px 6px}}
+/* a speech bubble that brings back what Ghost and Echo are saying; the hint steps aside while they talk */
+.igw-wrap .igw-bubble{position:absolute;left:14px;bottom:24px;width:40px;height:40px;border:1px solid #2c6f93;border-radius:50% 50% 50% 8px;background:rgba(7,19,32,.9);cursor:pointer;box-shadow:0 0 14px rgba(47,155,255,.3)}
+.igw-wrap .igw-bubble::before{content:"";position:absolute;left:11px;top:13px;width:16px;height:3px;border-radius:2px;background:#64d5ff;box-shadow:0 6px 0 #ff9a4a}
+.igw-wrap .igw-world.igw-talking .igw-tip{display:none}
+.igw-wrap .igw-ticker{cursor:pointer}
+/* on a phone: the card folds to its two tabs, the clan counter moves into the big map, and nothing covers the tower */
+@media(max-width:600px){
+  .igw-wrap .igw-card.is-min{width:auto;padding:4px;background:rgba(4,11,20,.7)}
+  .igw-wrap .igw-card.is-min>*:not(.igw-card-tabs){display:none!important}
+  .igw-wrap .igw-card.is-min .igw-card-tabs{margin:0}
+  .igw-wrap .igw-card.is-min .igw-card-tabs button{min-width:62px;min-height:32px}
+  .igw-wrap .igw-card.is-min::before{display:none}
+  .igw-wrap .igw-counter{display:none}
+  .igw-wrap .igw-map.is-big~.igw-counter{display:none}
+  .igw-wrap .igw-help-btn{top:160px}
+  .igw-wrap .igw-sound-btn{top:160px;right:58px}
+  .igw-wrap .igw-night-btn{top:205px;right:14px}
+  .igw-wrap .igw-gate-btn{top:205px;right:119px}
+  .igw-wrap .igw-bubble{left:50%;transform:translateX(-50%);bottom:136px}
+  .igw-wrap .igw-map canvas{opacity:.92}
+}
+
+/* the big screen's live stream, over the town */
+.igw-live{position:absolute;z-index:30;left:50%;top:50%;transform:translate(-50%,-50%);width:min(720px,92%);background:#05080f;border:1px solid #2f9fd6;border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,.6);overflow:hidden}
+.igw-live-head{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 10px;font:700 13px/1.2 system-ui,sans-serif;color:#fff;letter-spacing:.04em}
+.igw-live-head::before{content:"";width:8px;height:8px;border-radius:50%;background:#e8262b;margin-right:6px}
+.igw-live-head{justify-content:flex-start}.igw-live-x{margin-left:auto;background:#1b2130;color:#fff;border:1px solid #3a4558;border-radius:6px;padding:4px 10px;font:600 13px system-ui,sans-serif;cursor:pointer}
+.igw-live iframe{display:block;width:100%;aspect-ratio:16/9;border:0;background:#000}
+
+.igw-wrap .igw-lore pre.igw-lore-talk{color:#e6ecf4}
+.igw-wrap .igw-lore pre.igw-lore-ghost{color:#9fdcf5}
+.igw-wrap .igw-lore pre.igw-lore-echo{color:#ffb37e}
+
+/* live video laid over the in-world screens */
+.igw-vids{position:absolute;left:0;top:0;overflow:hidden;pointer-events:none;z-index:1}
+.igw-vid{position:absolute;left:0;top:0;border:0;pointer-events:auto;background:#000;transform-origin:0 0;will-change:transform}
+.igw-vid iframe{display:block;width:100%;height:100%;border:0}
+.igw-vid-btn{font:600 12px/1 system-ui,sans-serif;letter-spacing:.04em}
+/* the stats card: feeling, what they are doing, the rivalry, and stat tiles */
+.igw-xp-txt{display:block;margin:4px 0 2px;font:600 11px/1.2 ui-monospace,Menlo,monospace;color:#8fb3c6;letter-spacing:.06em}
+.igw-live-stats{display:grid;gap:7px;margin:8px 0 6px}
+.igw-feel{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:8px;font:700 11px/1.2 ui-monospace,Menlo,monospace;letter-spacing:.06em;text-transform:uppercase;color:#cfe8f7}
+.igw-feel-bar,.igw-rival-bar,.igw-tile-bar{display:block;height:6px;border-radius:4px;background:rgba(255,255,255,.08);overflow:hidden}
+.igw-feel-bar b{display:block;height:100%;width:6%;background:linear-gradient(90deg,#3aa0ff,#ffb02e 60%,#ff2b2b);transition:width .4s}
+.igw-card.is-echo .igw-feel-bar b{background:linear-gradient(90deg,#ff8a3a,#ffb02e 55%,#ff2b2b)}
+.igw-feel.is-hot{color:#ff5a5a;animation:igwHot 1s ease-in-out infinite}
+@keyframes igwHot{50%{opacity:.6}}
+.igw-doing{font:500 12px/1.35 system-ui,sans-serif;color:#b9c7d4}
+.igw-rival{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:6px;font:700 10px/1 ui-monospace,Menlo,monospace;letter-spacing:.05em}
+.igw-rival-a{color:#4fc8f5}.igw-rival-b{color:#ff9a4d}
+.igw-rival-bar{background:#ff9a4d;height:7px}.igw-rival-bar b{display:block;height:100%;background:#4fc8f5;transition:width .6s}
+.igw-wrap .igw-card.is-open dl.igw-stats{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.igw-wrap .igw-card.is-open .igw-stats .igw-tile dt,.igw-wrap .igw-card.is-open .igw-stats .igw-tile dd,.igw-wrap .igw-card.is-echo.is-open .igw-stats .igw-tile dt,.igw-wrap .igw-card.is-echo.is-open .igw-stats .igw-tile dd{min-height:0;display:block;background:none;border:0;padding:0;border-radius:0}
+.igw-wrap .igw-live-stats,.igw-wrap .igw-xp-txt{display:none}.igw-wrap .igw-card.is-open .igw-live-stats{display:grid}.igw-wrap .igw-card.is-open .igw-xp-txt{display:block}
+.igw-tile{display:grid;grid-template-columns:1fr auto;align-items:baseline;gap:2px 6px;padding:7px 8px;border:1px solid rgba(120,170,200,.18);border-radius:8px;background:rgba(8,16,26,.6)}
+.igw-tile.is-lead{border-color:rgba(79,200,245,.55)}
+.igw-card.is-echo .igw-tile.is-lead{border-color:rgba(255,154,77,.6)}
+.igw-tile dt{margin:0;font:600 10px/1.2 system-ui,sans-serif;color:#8fa6b8;text-transform:uppercase;letter-spacing:.05em}
+.igw-tile dt::before{content:attr(data-icon);margin-right:4px;color:#4fc8f5}
+.igw-card.is-echo .igw-tile dt::before{color:#ff9a4d}
+.igw-tile dd{margin:0;font:700 18px/1 ui-monospace,Menlo,monospace;color:#fff;text-align:right}
+.igw-tile-bar{grid-column:1/-1;height:4px}.igw-tile-bar b{display:block;height:100%;background:#4fc8f5}
+.igw-card.is-echo .igw-tile-bar b{background:#ff9a4d}
+.igw-tile-vs{grid-column:1/-1;font:500 10px/1 system-ui,sans-serif;color:#6f8597}
+.igw-wrap .igw-card dl.igw-stats .igw-stats-note{grid-column:1/-1}
+@media(max-width:600px){.igw-tile dd{font-size:15px}.igw-live-stats{gap:5px}}
+
+html.igw-entering .igw-wrap .igw-vids,.igw-wrap .igw-world:not(.is-live) .igw-vids{display:none!important}
+
+/* stat tiles fit inside the card on a phone */
+.igw-wrap .igw-card.is-open dl.igw-stats{grid-template-columns:repeat(2,minmax(0,1fr));width:100%;box-sizing:border-box}
+.igw-tile{min-width:0;box-sizing:border-box;grid-template-columns:minmax(0,1fr) auto}
+.igw-tile dt{overflow-wrap:normal;word-break:normal;hyphens:none}
+@media(max-width:600px){.igw-tile{padding:6px}.igw-tile dt{font-size:9px}.igw-tile dd{font-size:14px}.igw-tile-vs{font-size:9px}.igw-feel,.igw-rival{font-size:10px}}
+
+/* a tile: the label across the top, the number under it on the left, then the bar and the other one's number */
+.igw-tile{grid-template-columns:1fr}
+.igw-tile dt,.igw-tile dd,.igw-tile-bar,.igw-tile-vs{grid-column:1}
+.igw-tile dd{text-align:left;margin-top:2px}
+.igw-wrap .igw-card .igw-card-where,.igw-wrap .igw-card > .igw-mood{display:none}
+
+/* bigger sticks on a phone */
+.igw-wrap .igw-stick{width:132px;height:132px;left:14px;bottom:16px}
+.igw-wrap .igw-stick-look{left:auto;right:14px}
+.igw-wrap .igw-stick i{width:56px;height:56px;margin:-28px 0 0 -28px}
+@media(max-width:600px){.igw-wrap .igw-tip{bottom:176px;max-width:calc(100% - 28px)}}
+.igw-vid{visibility:hidden}
+
+.igw-wrap .igw-ui{top:var(--igw-under,0px)}
+
+/* while the arena's surfaces are being prepared */
+.igw-wrap .igw-world.is-loading::after{content:"Loading the arena\2026";position:absolute;left:50%;bottom:22%;transform:translateX(-50%);z-index:5;padding:9px 18px;border:1px solid #2c6f93;border-radius:999px;background:rgba(5,12,22,.88);color:#cfe8f7;font:600 14px/1 system-ui,sans-serif;letter-spacing:.04em;animation:igwLoad 1.2s ease-in-out infinite}
+@keyframes igwLoad{50%{opacity:.55}}
+
+/* write to Ghost or Echo, in the arena */
+.igw-wrap .igw-note-chip{position:absolute;left:50%;bottom:168px;transform:translateX(-50%);z-index:6;padding:11px 20px;border-radius:999px;border:1px solid #4fc8f5;background:rgba(6,16,28,.94);color:#eaf6ff;font:700 15px/1 system-ui,sans-serif;cursor:pointer;box-shadow:0 4px 18px rgba(0,0,0,.45);white-space:nowrap}
+.igw-wrap .igw-note-chip.is-echo{border-color:#ff9a4d}
+.igw-wrap .igw-note-chip[hidden]{display:none}
+.igw-wrap .igw-world.igw-chip .igw-tip{display:none}
+.igw-note{position:absolute;z-index:40;left:50%;top:50%;transform:translate(-50%,-50%);width:min(440px,calc(100% - 24px));max-height:calc(100% - 24px);overflow:auto;background:#07101c;border:1px solid #4fc8f5;border-radius:14px;box-shadow:0 14px 44px rgba(0,0,0,.65);color:#e6eef6;font:400 15px/1.45 system-ui,sans-serif}
+.igw-note.is-echo{border-color:#ff9a4d}
+.igw-note-head{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid rgba(120,170,200,.2)}
+.igw-note-head strong{font-size:15px;letter-spacing:.02em}
+.igw-note-x{margin-left:auto;background:#162233;color:#fff;border:1px solid #3a4558;border-radius:8px;padding:6px 12px;font:600 13px system-ui,sans-serif;cursor:pointer}
+.igw-note-body{padding:12px}
+.igw-note-body p{margin:0 0 8px}
+.igw-note-last{margin:0 0 10px;padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.04)}
+.igw-note-you{color:#9fb2c4}.igw-note-them{color:#cfe8f7}.igw-note.is-echo .igw-note-them{color:#ffd0ad}
+.igw-note-text{display:block;width:100%;box-sizing:border-box;min-height:84px;padding:10px;border-radius:10px;border:1px solid #2c4258;background:#0b1626;color:#fff;font:400 16px/1.4 system-ui,sans-serif;resize:vertical}
+.igw-note-row{display:flex;gap:8px;margin:8px 0}
+.igw-note-gift{flex:1;min-width:0;padding:9px;border-radius:10px;border:1px solid #2c4258;background:#0b1626;color:#fff;font:400 15px system-ui,sans-serif}
+.igw-note-send{margin-left:auto;padding:10px 22px;border-radius:10px;border:0;background:#2f9fd6;color:#04121d;font:700 15px system-ui,sans-serif;cursor:pointer}
+.igw-note.is-echo .igw-note-send{background:#ff9a4d}
+.igw-note-send:disabled{opacity:.6}
+.igw-note-msg{font-size:13px;color:#9fb2c4;min-height:1.2em}
+.igw-note-dm{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:#c4d2df;cursor:pointer}
+.igw-note-dm input{margin-top:2px;width:18px;height:18px}
+.igw-wrap .igw-world.igw-noting .igw-stick,.igw-wrap .igw-world.igw-noting .igw-tip,.igw-wrap .igw-world.igw-noting .igw-note-chip{display:none}
+@media(max-width:600px){.igw-note{top:auto;bottom:10px;transform:translateX(-50%)}}
+
+/* their needs, and what they were up to */
+.igw-needs{display:grid;grid-template-columns:1fr 1fr;gap:5px 10px}
+.igw-needs[hidden],.igw-feed[hidden]{display:none}
+.igw-need{display:grid;gap:3px;font:600 10px/1 ui-monospace,Menlo,monospace;letter-spacing:.05em;text-transform:uppercase;color:#9fb2c4}
+.igw-need i{display:block;height:5px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden}
+.igw-need b{display:block;height:100%;background:#4fc8f5;transition:width .6s}
+.igw-card.is-echo .igw-need b{background:#ff9a4d}
+.igw-need b.is-low{background:#ff4d4d}
+.igw-feed{font-size:11px;color:#8fa6b8}
+
+/* the first loading screen gives up after 100 seconds, so a device that cannot draw 3D still sees the picture behind it */
+@keyframes igwPreGo { to { opacity: 0; visibility: hidden; } }
+
+/* the stream arena (README-ADMIN 249): one small Options button instead of a column of buttons */
+.igw-wrap .igw-hud-actions.is-folded > :not(.igw-opt-btn):not(.igw-fs-btn) { display: none !important; }
+.igw-wrap .igw-opt-btn { order: -1; }
+.igw-wrap .igw-hud-actions { top: 14px; width: auto; min-width: 96px; }
+
+/* seated visitors just watch: no on-screen sticks (README-ADMIN 252) */
+.igw-seated .igw-stick { display: none !important; }
+
+/* in a broadcast suite: walking is locked, looking is free (README-ADMIN 254) */
+.igw-in-suite .igw-stick-move { display: none !important; }
+.igw-wrap .igw-suite-leave { display: none; }
+.igw-in-suite .igw-suite-leave { display: block; }
+.igw-in-suite .igw-walk-btn { display: none !important; }
+.igw-in-suite .igw-stick { display: none !important; }
+.igw-wrap .igw-cams { display: none; }
+.igw-in-suite .igw-cams { display: flex; position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); gap: 6px; z-index: 6; flex-wrap: wrap; justify-content: center; max-width: calc(100% - 20px); }
+.igw-cams button { padding: 8px 12px; border: 1px solid #2c6f93; border-radius: 6px; background: rgba(4, 11, 20, .85); color: #cfe8ff; font: 600 13px/1 system-ui, sans-serif; cursor: pointer; }
+.igw-cams button.is-on { border-color: #64d5ff; background: #0b3550; color: #fff; }
+.igw-wrap .igw-watch { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 6; padding: 10px 18px; border: 1px solid #e8262b; border-radius: 999px; background: rgba(40, 6, 8, .88); color: #fff; font: 700 14px/1 system-ui, sans-serif; letter-spacing: .04em; cursor: pointer; }
+.igw-wrap .igw-watch::before { content: ''; display: inline-block; width: 8px; height: 8px; margin-right: 8px; border-radius: 50%; background: #e8262b; vertical-align: 1px; }
+.igw-wrap .igw-watch[hidden] { display: none; }
+.igw-in-suite .igw-watch { display: none; }
+/* full screen (README-ADMIN 258) */
+.igw-wrap .igw-world.igw-fs { width: 100vw; height: 100vh; height: 100dvh; max-width: none; border: 0; border-radius: 0; }
+.igw-wrap .igw-world.igw-fs-fake { position: fixed; inset: 0; z-index: 2147483000; }
+html.igw-fs-page, html.igw-fs-page body { overflow: hidden !important; overscroll-behavior: none; }
+.igw-wrap .igw-world:fullscreen { width: 100vw; height: 100vh; border: 0; border-radius: 0; }
+.igw-wrap .igw-world:-webkit-full-screen { width: 100vw; height: 100vh; border: 0; border-radius: 0; }
+.igw-wrap .igw-world.igw-fs .igw-hud-actions { top: 14px; }
+.igw-in-suite .igw-note-chip { display: none !important; }
+/* the mod booth (README-ADMIN 273) */
+.igw-wrap .igw-booth-leave { display: none; }
+.igw-in-booth .igw-booth-leave { display: inline-flex; }
+.igw-in-booth .igw-booth-go, .igw-in-booth .igw-walk-btn, .igw-in-booth .igw-watch, .igw-in-booth .igw-stick { display: none !important; }
+/* the Mainframe (README-ADMIN 274) */
+.igw-wrap .igw-mf { position: absolute; left: 50%; top: 64px; transform: translate(-50%, -8px); z-index: 7; max-width: min(92%, 560px); padding: 7px 14px; border: 1px solid rgba(79, 168, 255, .6); border-radius: 6px; background: rgba(3, 9, 20, .88); color: #bfe0ff; font: 600 12px/1.35 ui-monospace, Menlo, Consolas, monospace; letter-spacing: .06em; text-align: center; opacity: 0; pointer-events: none; transition: opacity .35s, transform .35s; }
+.igw-wrap .igw-mf.is-on { opacity: 1; transform: translate(-50%, 0); }
+.igw-wrap .igw-mf.is-glitch { color: #c8ffd9; border-color: #3bd671; animation: igwMfJit .18s steps(2) 4; }
+@keyframes igwMfJit { 0% { transform: translate(-50%, 0); } 50% { transform: translate(calc(-50% + 3px), -1px); } 100% { transform: translate(calc(-50% - 2px), 1px); } }
+.igw-desync canvas { animation: igwDesync .65s steps(6) 1; }
+@keyframes igwDesync { 0% { filter: none; transform: none; } 20% { filter: hue-rotate(80deg) contrast(1.4); transform: translateX(4px); } 40% { filter: saturate(0) brightness(1.6); transform: translateX(-3px); } 60% { filter: hue-rotate(-60deg); transform: translateY(2px); } 100% { filter: none; transform: none; } }
+.igw-materialise canvas { animation: igwMat 1.5s ease-out 1; }
+@keyframes igwMat { 0% { filter: brightness(2.2) blur(6px) saturate(0); opacity: .2; } 60% { filter: brightness(1.2) blur(1px) saturate(.6); opacity: .9; } 100% { filter: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .igw-desync canvas, .igw-materialise canvas, .igw-wrap .igw-mf.is-glitch { animation: none; } }
+/* README-ADMIN 280: no site header or footer; the arena fills the screen. One Menu (top right) in two parts: CORE (system) and The
+   Memory (their world). The HUD lines up on one top row: card left, stream strip centre, Menu right. */
+.site-hidden-nav { display: none !important; }
+.igw-home .igw-world { height: 100vh; height: 100dvh; }
+.igw-wrap .igw-hud-actions { position: absolute; top: 14px; right: 14px; z-index: 8; width: auto; min-width: 0; gap: 4px; }
+.igw-wrap .igw-hud-actions.is-folded > :not(.igw-opt-btn) { display: none !important; }
+.igw-wrap .igw-hud-actions:not(.is-folded) { width: 220px; max-height: calc(100% - 28px); overflow-y: auto; padding: 8px; border: 1px solid #2c6f93; border-radius: 8px; background: rgba(4, 11, 20, .985); box-shadow: 0 10px 34px rgba(0, 0, 0, .45); }
+.igw-wrap .igw-hud-actions > button, .igw-wrap .igw-hud-actions > .igw-menu-link { display: flex; align-items: center; justify-content: flex-start; min-height: 38px; padding: 0 12px; text-align: left; }
+.igw-wrap .igw-hud-actions > .igw-opt-btn { order: -10; justify-content: center; min-width: 96px; font-weight: 700; letter-spacing: .04em; }
+.igw-wrap .igw-hud-actions:not(.is-folded) > .igw-opt-btn { align-self: flex-end; }
+.igw-wrap .igw-menu-h { order: 0; margin: 8px 2px 2px; font: 700 10px/1.2 ui-monospace, Menlo, monospace; letter-spacing: .14em; text-transform: uppercase; color: #6fb8ff; }
+.igw-wrap .igw-menu-h.igw-menu-mem { order: 10; color: #64d5ff; margin-top: 12px; }
+.igw-wrap .igw-fs-btn, .igw-wrap .igw-q-btn, .igw-wrap .igw-mute-btn, .igw-wrap .igw-vid-btn, .igw-wrap .igw-hud-actions > .igw-help-btn { order: 1; }
+.igw-wrap .igw-menu-link { order: 2; box-sizing: border-box; border: 1px solid #1f4d66; border-radius: 6px; background: rgba(7, 19, 32, .9); color: #bfe3f2; font: 600 11px/1.2 system-ui, sans-serif; text-decoration: none; }
+.igw-wrap .igw-menu-link:hover, .igw-wrap .igw-menu-link:focus-visible { border-color: #64d5ff; color: #fff; }
+.igw-wrap .igw-walk-btn, .igw-wrap .igw-diary-btn, .igw-wrap .igw-suite-btn, .igw-wrap .igw-suite-leave, .igw-wrap .igw-booth-go, .igw-wrap .igw-booth-leave { order: 11; }
+.igw-wrap .igw-menu-discord { order: 12; margin-top: 2px; color: #cfe8ff; font: 600 11px/1.3 system-ui, sans-serif; }
+.igw-wrap .igw-menu-discord summary { cursor: pointer; padding: 10px 12px; border: 1px solid #2c6f93; border-radius: 6px; background: rgba(7, 19, 32, .9); list-style: none; }
+.igw-wrap .igw-hud-actions > .igw-help-btn { position: static; width: 100%; height: auto; border-radius: 6px; font: 600 11px/1.2 system-ui, sans-serif; }
+.igw-wrap .igw-counter, .igw-wrap .igw-world.igw-fs .igw-counter { left: 50%; right: auto; top: 14px; transform: translateX(-50%); z-index: 4; }
+.igw-wrap .igw-mf { top: 66px; }
+@media (max-width: 700px) {
+  .igw-wrap .igw-counter, .igw-wrap .igw-world.igw-fs .igw-counter { display: flex !important; left: auto; right: 10px; top: 60px; transform: none; }
+  .igw-wrap .igw-counter span:last-child { display: none; }
+  .igw-wrap .igw-hud-actions { top: 10px; right: 10px; }
+  .igw-wrap .igw-hud-actions:not(.is-folded) { z-index: 9; }
+  .igw-wrap .igw-mf { top: auto; bottom: 96px; }
+}
+/* README-ADMIN 283: Team Ghost / Team Echo and the mods' buttons, under The Memory in the Menu */
+.igw-wrap .igw-tug-btn, .igw-wrap .igw-ops-btn { order: 13; }
+.igw-wrap .igw-tug-ghost { border-color: #2aa9d6 !important; color: #bdefff !important; }
+.igw-wrap .igw-tug-echo { border-color: #d9802f !important; color: #ffd9b3 !important; }
+/* README-ADMIN 288: the Owner's cinematic spin hides everything on top of the 3D view */
+.igw-world.igw-cine > :not(canvas):not(.igw-canvas):not(:has(.igw-canvas)) { opacity: 0 !important; pointer-events: none !important; transition: opacity .6s; }
+/* README-ADMIN 291: no tab bar at the top of the site's pages, and none of the old town's lines on the diary page */
+.nl-cm { display: none !important; }
+.ghost-view .ghost-doing, .ghost-view .ghost-places { display: none !important; }
