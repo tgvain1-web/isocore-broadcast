@@ -48,6 +48,21 @@ jobs:
               print('RESULT: NOT READY:', '; '.join(problems))
               sys.exit(1)
           print('RESULT: API and static pages reachable. Browser/WebGL and Xsolla not yet tested.')
+          # A fresh live deploy should serve the updated preview interactivity marker.
+          import time
+          for attempt in range(8):
+              with urllib.request.urlopen(base+'/preview.html?check='+str(attempt), timeout=20) as page:
+                  preview=page.read().decode('utf-8','replace')
+              with urllib.request.urlopen(base+'/assets/broadcast.css?check='+str(attempt), timeout=20) as asset:
+                  styles=asset.read().decode('utf-8','replace')
+              if 'class="isocore-preview"' in preview and 'body.isocore-preview #isocore-broadcast' in styles:
+                  print('RESULT: NEW PREVIEW INTERACTION STYLES DEPLOYED')
+                  break
+              print('Updated preview not deployed yet, attempt',attempt+1)
+              time.sleep(8)
+          else:
+              print('RESULT: PREVIEW INTERACTION FIX NOT YET DEPLOYED')
+              sys.exit(1)
           # This test checks HTTP availability. The actual arena close button still needs
           # a browser interaction test, which HTTP-only checks cannot simulate.
 
