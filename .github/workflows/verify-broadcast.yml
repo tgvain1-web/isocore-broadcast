@@ -7,6 +7,10 @@ on:
       - 'public/preview.html'
       - 'public/assets/broadcast.css'
       - 'public/assets/bridge.js'
+      - 'public/assets/ig-ghost-world-xsolla.js'
+      - 'src/worker.mjs'
+      - 'public/control.html'
+      - 'migrations/0001_init.sql'
   workflow_dispatch:
 permissions:
   contents: read
@@ -15,6 +19,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 4
     steps:
+      - name: Check out updated source
+        uses: actions/checkout@v4
+      - name: Verify Worker and camera JavaScript syntax
+        run: |
+          node --check src/worker.mjs
+          node --check public/assets/bridge.js
+          node --check public/assets/ig-ghost-world-xsolla.js
       - name: Probe deployed Worker endpoints
         shell: bash
         run: |
@@ -22,7 +33,7 @@ jobs:
           import urllib.request, urllib.error, json, sys
           base='https://isocore-broadcast.tgvain1.workers.dev'
           problems=[]
-          for path in ('/api/health','/preview.html','/control.html','/xsolla-setup.html'):
+          for path in ('/api/health','/api/state','/preview.html','/control.html','/xsolla-setup.html'):
               url=base+path
               try:
                   with urllib.request.urlopen(urllib.request.Request(url,headers={'User-Agent':'Isocore-Broadcast-SmokeTest/1.0'}),timeout=20) as r:
@@ -36,6 +47,10 @@ jobs:
                               if data.get('ok') is not True: problems.append('Health not ready')
                           except Exception:
                               problems.append('Health not JSON')
+                      elif path=='/api/state':
+                          data=json.loads(body)
+                          print('CAMERA:',json.dumps(data.get('camera')))
+                          if not data.get('ok'): problems.append('Camera API not ready')
                       elif '<html' not in body.lower() and '<!doctype' not in body.lower():
                           problems.append(path+' did not return HTML')
               except urllib.error.HTTPError as e:
@@ -59,11 +74,15 @@ jobs:
               except urllib.error.HTTPError as e:
                   print('Live asset HTTP',e.code,'at',e.url,'body',e.read(300).decode('utf-8','replace'))
                   preview=''; styles=''
+              with urllib.request.urlopen(urllib.request.Request(base+'/api/state',headers={'User-Agent':'Isocore-Broadcast-SmokeTest/1.0'}), timeout=20) as state_url:
+                  current=json.loads(state_url.read().decode('utf-8','replace')).get('camera',{})
               if ('id="iso-preview-toggle"' in preview and
-                  'bridge.js?v=8' in preview and
+                  'bridge.js?v=9' in preview and
                   'V0.6.2' in styles and
-                  'show-igw-cams' in styles):
-                  print('RESULT: V0.6.2 MOBILE PREVIEW AND FIVE-CAMERA TOGGLE DEPLOYED')
+                  'show-igw-cams' in styles and
+                  (current.get('shot')=='first' or (current.get('shot') in ('side','shoulder','wide','high') and int(current.get('updated_at') or 0)>0))):
+                  print('RESULT: V0.6.3 FIRST-PERSON DEFAULT / SIDE-FRAME UPDATE DEPLOYED')
+                  print('ON-AIR STATE:',json.dumps(current))
                   break
               print('Updated preview not deployed yet, attempt',attempt+1)
               time.sleep(8)
