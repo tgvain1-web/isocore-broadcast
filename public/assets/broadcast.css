@@ -37,3 +37,22 @@
 #isocore-broadcast #iso-overlay-shell{position:absolute;inset:0;z-index:4;overflow:hidden}
 #isocore-broadcast #iso-diag{position:absolute;right:2%;bottom:7%;background:#0b1624f2;border:1px solid #00d4ff;color:#d9f0ff;border-radius:7px;padding:10px 14px;font:700 13px/1.5 Consolas,monospace;max-width:52%;white-space:pre-line;z-index:8}
 #isocore-broadcast #iso-diag.error{border-color:#f77;color:#ffd6d6}
+
+/* 0.6.1: Browser preview is interactive so the original Welcome / Controls guide can be dismissed.
+   On-air Xsolla stays click-through and guide-free. */
+body.isocore-preview #isocore-broadcast { pointer-events:auto !important; }
+body.isocore-preview #isocore-broadcast #iso-overlay-shell,
+body.isocore-preview #isocore-broadcast #iso-camera-label,
+body.isocore-preview #isocore-broadcast #iso-diag { pointer-events:none !important; }
+body.isocore-preview #isocore-broadcast #iso-camera,
+body.isocore-preview #isocore-broadcast #ig-ghost-world,
+body.isocore-preview #isocore-broadcast .igw-guide {
+  pointer-events:auto !important;
+}
+body.isocore-preview #isocore-broadcast .igw-world.igw-cine > .igw-guide {
+  opacity:1 !important;
+  pointer-events:auto !important;
+  z-index:30 !important;
+}
+body.isocore-preview #isocore-broadcast .igw-guide { touch-action:pan-y; }
+body:not(.isocore-preview) #isocore-broadcast .igw-guide { display:none !important; pointer-events:none !important; }
