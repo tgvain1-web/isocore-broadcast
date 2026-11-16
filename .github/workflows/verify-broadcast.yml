@@ -59,8 +59,11 @@ jobs:
               except urllib.error.HTTPError as e:
                   print('Live asset HTTP',e.code,'at',e.url,'body',e.read(300).decode('utf-8','replace'))
                   preview=''; styles=''
-              if 'class="isocore-preview"' in preview and 'body.isocore-preview #isocore-broadcast' in styles:
-                  print('RESULT: NEW PREVIEW INTERACTION STYLES DEPLOYED')
+              if ('id="iso-preview-toggle"' in preview and
+                  'bridge.js?v=8' in preview and
+                  'V0.6.2' in styles and
+                  'show-igw-cams' in styles):
+                  print('RESULT: V0.6.2 MOBILE PREVIEW AND FIVE-CAMERA TOGGLE DEPLOYED')
                   break
               print('Updated preview not deployed yet, attempt',attempt+1)
               time.sleep(8)
