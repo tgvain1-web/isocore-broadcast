@@ -51,10 +51,14 @@ jobs:
           # A fresh live deploy should serve the updated preview interactivity marker.
           import time
           for attempt in range(8):
-              with urllib.request.urlopen(base+'/preview.html?check='+str(attempt), timeout=20) as page:
-                  preview=page.read().decode('utf-8','replace')
-              with urllib.request.urlopen(base+'/assets/broadcast.css?check='+str(attempt), timeout=20) as asset:
-                  styles=asset.read().decode('utf-8','replace')
+              try:
+                  with urllib.request.urlopen(urllib.request.Request(base+'/preview.html',headers={'User-Agent':'Isocore-Broadcast-SmokeTest/1.0'}), timeout=20) as page:
+                      preview=page.read().decode('utf-8','replace')
+                  with urllib.request.urlopen(urllib.request.Request(base+'/assets/broadcast.css',headers={'User-Agent':'Isocore-Broadcast-SmokeTest/1.0'}), timeout=20) as asset:
+                      styles=asset.read().decode('utf-8','replace')
+              except urllib.error.HTTPError as e:
+                  print('Live asset HTTP',e.code,'at',e.url,'body',e.read(300).decode('utf-8','replace'))
+                  preview=''; styles=''
               if 'class="isocore-preview"' in preview and 'body.isocore-preview #isocore-broadcast' in styles:
                   print('RESULT: NEW PREVIEW INTERACTION STYLES DEPLOYED')
                   break
