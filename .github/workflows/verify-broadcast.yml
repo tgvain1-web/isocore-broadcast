@@ -1,0 +1,48 @@
+name: Verify live Isocore Broadcast
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/verify-broadcast.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Probe deployed Worker endpoints
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import urllib.request, urllib.error, json, sys
+          base='https://isocore-broadcast.tgvain1.workers.dev'
+          problems=[]
+          for path in ('/api/health','/preview.html','/control.html','/xsolla-setup.html'):
+              url=base+path
+              try:
+                  with urllib.request.urlopen(urllib.request.Request(url,headers={'User-Agent':'Isocore-Broadcast-SmokeTest/1.0'}),timeout=20) as r:
+                      body=r.read(4096).decode('utf-8','replace')
+                      code=r.status
+                      print(path, 'HTTP', code, 'Content-Type:',r.headers.get('Content-Type',''))
+                      if path=='/api/health':
+                          try:
+                              data=json.loads(body)
+                              print('HEALTH:',json.dumps(data))
+                              if data.get('ok') is not True: problems.append('Health not ready')
+                          except Exception:
+                              problems.append('Health not JSON')
+                      elif '<html' not in body.lower() and '<!doctype' not in body.lower():
+                          problems.append(path+' did not return HTML')
+              except urllib.error.HTTPError as e:
+                  print(path, 'HTTP',e.code,'DETAIL',e.read(1024).decode('utf-8','replace'))
+                  problems.append(path+' HTTP '+str(e.code))
+              except Exception as e:
+                  print(path, 'CONNECTION ERROR',repr(e))
+                  problems.append(path+' unreachable')
+          if problems:
+              print('RESULT: NOT READY:', '; '.join(problems))
+              sys.exit(1)
+          print('RESULT: API and static pages reachable. Browser/WebGL and Xsolla not yet tested.')
+          PY
