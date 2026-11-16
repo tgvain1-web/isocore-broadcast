@@ -56,3 +56,47 @@ body.isocore-preview #isocore-broadcast .igw-world.igw-cine > .igw-guide {
 }
 body.isocore-preview #isocore-broadcast .igw-guide { touch-action:pan-y; }
 body:not(.isocore-preview) #isocore-broadcast .igw-guide { display:none !important; pointer-events:none !important; }
+
+
+/* V0.6.2 — Hide all FIVE camera shortcut buttons, including Jumbotron.
+   The angles stay operational via the owner camera-control page.
+   Only standalone preview permits intentionally reopening the local row. */
+#isocore-broadcast .igw-cams,
+#isocore-broadcast .igw-in-suite .igw-cams,
+#isocore-broadcast .igw-world.igw-in-suite .igw-cams {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+body.isocore-preview #isocore-broadcast.show-igw-cams .igw-cams,
+body.isocore-preview #isocore-broadcast.show-igw-cams .igw-in-suite .igw-cams {
+  display: flex !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  max-width: calc(100% - 14px);
+  z-index: 10 !important;
+}
+/* The stream remains a transparent 16:9 canvas; these rules affect preview only. */
+body.isocore-preview {
+  background: radial-gradient(ellipse at center, #152743 0%, #070e1b 70%, #030710 100%) !important;
+}
+body.isocore-preview #isocore-broadcast {
+  position: fixed !important;
+  inset: auto !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  width: min(100vw, 177.77778dvh) !important;
+  height: auto !important;
+  aspect-ratio: 16 / 9 !important;
+  overflow: hidden !important;
+  background: #06101b !important;
+  box-shadow: 0 0 48px #00d4ff15, 0 18px 70px #0008;
+  border: 1px solid #00d4ff33;
+}
+body.isocore-preview #isocore-broadcast #iso-camera {
+  left: 9.5% !important;
+  top: 11% !important;
+  width: 81% !important;
+  max-height: 83% !important;
+}
