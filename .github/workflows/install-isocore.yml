@@ -1,0 +1,85 @@
+name: Install Isocore Broadcast project
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'ISOCORE-BROADCAST-PART-1.zip'
+      - 'ISOCORE-BROADCAST-PART-2.zip'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: install-isocore-broadcast
+  cancel-in-progress: false
+
+jobs:
+  unpack:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out project
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check both uploads arrived
+        id: check
+        shell: bash
+        run: |
+          if [[ -s "ISOCORE-BROADCAST-PART-1.zip" && -s "ISOCORE-BROADCAST-PART-2.zip" ]]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "Both ZIP parts need to be uploaded. Nothing changed."
+          fi
+
+      - name: Unpack and verify original project files
+        if: steps.check.outputs.ready == 'true'
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import zipfile
+          from pathlib import Path
+          files = ['ISOCORE-BROADCAST-PART-1.zip', 'ISOCORE-BROADCAST-PART-2.zip']
+          names = set()
+          for f in files:
+              with zipfile.ZipFile(f) as z:
+                  bad = z.testzip()
+                  if bad:
+                      raise SystemExit(f'Corrupt ZIP entry in {f}: {bad}')
+                  for member in z.infolist():
+                      name = member.filename
+                      parts = Path(name).parts
+                      if member.is_dir():
+                          continue
+                      if name.startswith('/') or '..' in parts or '\\' in name or name.startswith('.github/'):
+                          raise SystemExit('Unsafe path: ' + name)
+                      if name in names:
+                          raise SystemExit('Duplicate entry: ' + name)
+                      names.add(name)
+                      target = Path(name)
+                      target.parent.mkdir(parents=True, exist_ok=True)
+                      target.write_bytes(z.read(member))
+          required = ['src/worker.mjs','wrangler.jsonc','public/preview.html',
+                      'public/assets/ig-ghost-world-xsolla.js','migrations/0001_init.sql']
+          missing = [f for f in required if not Path(f).is_file()]
+          if missing:
+              raise SystemExit('Missing required project files: ' + str(missing))
+          print('Verified and installed', len(names), 'project files')
+          PY
+
+      - name: Commit extracted source and discard upload ZIPs
+        if: steps.check.outputs.ready == 'true'
+        shell: bash
+        run: |
+          rm -f ISOCORE-BROADCAST-PART-1.zip ISOCORE-BROADCAST-PART-2.zip
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "Install Isocore Broadcast Cloudflare V0.6 project"
+            git push origin HEAD:main
+          else
+            echo "Project already installed"
+          fi
