@@ -4,6 +4,9 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/verify-broadcast.yml'
+      - 'public/preview.html'
+      - 'public/assets/broadcast.css'
+      - 'public/assets/bridge.js'
   workflow_dispatch:
 permissions:
   contents: read
@@ -45,4 +48,7 @@ jobs:
               print('RESULT: NOT READY:', '; '.join(problems))
               sys.exit(1)
           print('RESULT: API and static pages reachable. Browser/WebGL and Xsolla not yet tested.')
+          # This test checks HTTP availability. The actual arena close button still needs
+          # a browser interaction test, which HTTP-only checks cannot simulate.
+
           PY
