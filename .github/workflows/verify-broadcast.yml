@@ -100,7 +100,7 @@ jobs:
                   print('Engine HTTP',e.code)
                   bridge='';engine=''
               if ('id="iso-preview-toggle"' in preview and
-                  'bridge.js?v=18' in preview and
+                  'bridge.js?v=19' in preview and
                   'V0.6.4' in styles and
                   "ROOT.classList.add('isocore-camera-booting')" in bridge and
                   'Isocore Broadcast Studio Key' in engine and
@@ -133,10 +133,10 @@ jobs:
           base='https://isocore-broadcast.tgvain1.workers.dev'
           required={
             '/control.html': 'Set GTA VI',
-            '/preview.html': 'bridge.js?v=18',
-            '/assets/bridge.js?v=18': 'GHOST // STREAMER CAM',
-            '/assets/lightstream-dialogue.js?v=18': 'Launch-night Ghost commentary',
-            '/assets/ig-ghost-world-xsolla.js?v=18': "['first', 'Streamer cam']",
+            '/preview.html': 'bridge.js?v=19',
+            '/assets/bridge.js?v=19': 'GHOST // STREAMER CAM',
+            '/assets/lightstream-dialogue.js?v=19': 'Launch-night Ghost commentary',
+            '/assets/ig-ghost-world-xsolla.js?v=19': "['first', 'Streamer cam']",
           }
           failed=[]
           for path,expected in required.items():
