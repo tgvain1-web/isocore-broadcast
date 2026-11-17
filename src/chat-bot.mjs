@@ -59,8 +59,9 @@ function configuration(env){
 export async function chatStatus(env,db){
   const c=await state(db),cfg=configuration(env);
   return {ok:true,connected:!!c?.broadcaster_id,channel:c?.login||'',
-    enabled:!!c?.enabled,subscribed:!!c?.subscribed,config:cfg,
-    ready:!!(c?.broadcaster_id&&c?.subscribed&&cfg.ai&&cfg.twitchApp&&cfg.encryption&&cfg.eventsub)};
+    enabled:!!c?.enabled,subscribed:Number(c?.subscribed)===1,
+    subscription_pending:Number(c?.subscribed)===2,config:cfg,
+    ready:!!(c?.broadcaster_id&&Number(c?.subscribed)===1&&cfg.ai&&cfg.twitchApp&&cfg.encryption&&cfg.eventsub)};
 }
 export async function startChatOAuth(env,db){
   const cfg=configuration(env);
@@ -74,7 +75,10 @@ export async function startChatOAuth(env,db){
   url.searchParams.set('response_type','code');
   url.searchParams.set('client_id',env.TWITCH_CLIENT_ID);
   url.searchParams.set('redirect_uri',REDIRECT);
-  url.searchParams.set('scope','user:read:chat user:write:chat');
+  // App-token EventSub chat requires BOTH the reader/bot and channel grants.
+  // A single broadcaster account grants all four scopes in our setup.
+  url.searchParams.set('scope','user:read:chat user:write:chat user:bot channel:bot');
+  url.searchParams.set('force_verify','true');
   url.searchParams.set('state',nonce);
   return {ok:true,authorization_url:url.toString()};
 }
@@ -107,10 +111,16 @@ async function createSubscription(env,db,appAccessToken){
   const response=await fetch(API+'/eventsub/subscriptions',{method:'POST',
     headers:{'Authorization':'Bearer '+appAccessToken,'Client-Id':env.TWITCH_CLIENT_ID,
       'Content-Type':'application/json'},body:JSON.stringify(body)});
-  // 409: the same subscription already exists.
-  const subscribed=response.status===202||response.status===409;
-  await db.prepare('UPDATE chat_bot_state SET subscribed=? WHERE id=1').bind(subscribed?1:0).run();
-  return subscribed;
+  if(response.status===202){
+    // Only Twitch's signed webhook challenge can mark a subscription active.
+    await db.prepare('UPDATE chat_bot_state SET subscribed=CASE WHEN subscribed=1 THEN 1 ELSE 2 END WHERE id=1').run();
+    return true;
+  }
+  if(response.status===409)throw Error('Twitch already has this subscription. Check connection shortly; if it remains inactive, contact support.');
+  if(response.status===401||response.status===403)
+    throw Error('Twitch denied the chat subscription. Reconnect Twitch to grant user:bot and channel:bot, then retry.');
+  if(response.status===400)throw Error('Twitch rejected the subscription request. Check the Twitch application and webhook configuration.');
+  throw Error('Twitch could not create the chat subscription (HTTP '+response.status+'). Retry shortly.');
 }
 export async function finishChatOAuth(request,env,db,getAppToken){
   const u=new URL(request.url),nonce=u.searchParams.get('state'),code=u.searchParams.get('code');
@@ -131,6 +141,9 @@ export async function finishChatOAuth(request,env,db,getAppToken){
     if(!r.ok)throw Error('Token exchange failed');
     const t=await r.json();
     if(!t.access_token||!t.refresh_token)throw Error('Missing user token');
+    const granted=new Set(Array.isArray(t.scope)?t.scope:[]);
+    if(['user:read:chat','user:write:chat','user:bot','channel:bot'].some(x=>!granted.has(x)))
+      throw Error('Missing required Twitch chat permissions. Reconnect and approve all four scopes.');
     const user=await fetch(API+'/users',{headers:{'Authorization':'Bearer '+t.access_token,'Client-Id':env.TWITCH_CLIENT_ID}});
     if(!user.ok)throw Error('Twitch user lookup failed');
     const who=(await user.json()).data?.[0];
@@ -140,16 +153,18 @@ export async function finishChatOAuth(request,env,db,getAppToken){
     if(who.login.toLowerCase()!==expected)throw Error('Incorrect Twitch account; sign in as your broadcast channel');
     await db.prepare('UPDATE chat_bot_state SET enabled=0,broadcaster_id=?,login=?,access_cipher=?,refresh_cipher=?,expires_at=?,subscribed=0 WHERE id=1')
       .bind(who.id,who.login,await protect(t.access_token,env),await protect(t.refresh_token,env),ttl()+Number(t.expires_in||3600)).run();
-    let subscribed=false;
-    try{subscribed=await createSubscription(env,db,await getAppToken(env));}catch(e){}
-    return show(true,'Twitch channel connected. '+(subscribed?'Chat events subscribed. ':'Chat subscription still needs retry. ')+'Return to the control room to enable replies when ready.');
+    // Attempt EventSub immediately but never silently claim the webhook is live.
+    try{await createSubscription(env,db,await getAppToken(env));}catch(e){}
+    return show(true,'Twitch channel connected. Verify EventSub in your control room before enabling replies.');
   }catch(e){return show(false,'Twitch connection failed. Check app permissions and channel configuration, then try again.');}
 }
 export async function chatOwnerAction(path,data,env,db,getAppToken){
   const c=await state(db),cfg=configuration(env);
   if(path==='/api/chat/enable'){
-    const ready=!!(c.broadcaster_id&&c.subscribed&&cfg.ai&&cfg.twitchApp&&cfg.encryption&&cfg.eventsub);
-    if(!ready)return {ok:false,error:'Connect Twitch, subscribe chat, and enable Cloudflare Workers AI first'};
+    const ready=!!(c.broadcaster_id&&Number(c.subscribed)===1&&cfg.ai&&cfg.twitchApp&&cfg.encryption&&cfg.eventsub);
+    if(!ready)return {ok:false,error:c.broadcaster_id&&Number(c.subscribed)!==1?
+      'Twitch chat subscription is not verified. Reconnect Twitch to grant all four chat permissions, then retry subscription.':
+      'Connect Twitch, verify chat subscription, and enable Cloudflare Workers AI first'};
     await db.prepare('UPDATE chat_bot_state SET enabled=1 WHERE id=1').run();
     return {ok:true,enabled:true};
   }
@@ -159,8 +174,13 @@ export async function chatOwnerAction(path,data,env,db,getAppToken){
   }
   if(path==='/api/chat/subscribe'){
     if(!c.broadcaster_id||!cfg.eventsub||!cfg.twitchApp)return {ok:false,error:'Twitch connection or EventSub configuration missing'};
-    const ok=await createSubscription(env,db,await getAppToken(env));
-    return {ok,subscribed:ok,error:ok?undefined:'Twitch rejected subscription; check OAuth scopes and app settings'};
+    try{
+      const requested=await createSubscription(env,db,await getAppToken(env));
+      return {ok:requested,subscription_pending:requested,error:requested?undefined:'Subscription request failed'};
+    }catch(e){
+      // Only expose our own fixed safe diagnostics, never upstream API data or tokens.
+      return {ok:false,error:String(e.message||'Twitch subscription temporarily unavailable')};
+    }
   }
   return {ok:false,error:'Unknown chat action'};
 }
@@ -185,7 +205,7 @@ async function createAIReply(env,who,viewer,question,game){
 async function deliverChatReply(row,env,db,getGameContext){
   try{
     const c=await state(db);
-    if(!c.enabled||!c.subscribed||!c.broadcaster_id||!env.AI)return;
+    if(!c.enabled||Number(c.subscribed)!==1||!c.broadcaster_id||!env.AI)return;
     const info=await getGameContext(env);
     const answer=await createAIReply(env,row.who,row.chatter_name,row.question,info?.game||'');
     const auth=await refreshUserToken(env,db,c);
@@ -208,7 +228,7 @@ export async function maybeAnswerChat(event,eventId,env,db,ctx,getGameContext){
   const cfg=configuration(env);
   if(!cfg.ai||!cfg.twitchApp||!cfg.encryption)return false;
   const c=await state(db);
-  if(!c.enabled||!c.subscribed||!c.broadcaster_id||String(event.broadcaster_user_id)!==String(c.broadcaster_id))return false;
+  if(!c.enabled||Number(c.subscribed)!==1||!c.broadcaster_id||String(event.broadcaster_user_id)!==String(c.broadcaster_id))return false;
   if(String(event.chatter_user_id)===String(c.broadcaster_id))return false;
   if(event.message_type&&event.message_type!=='text')return false;
   const q=parseDirectedQuestion(event.message?.text);
@@ -231,4 +251,16 @@ export async function maybeAnswerChat(event,eventId,env,db,ctx,getGameContext){
 export async function revokeChatSubscription(db){
   await tables(db);
   await db.prepare('UPDATE chat_bot_state SET subscribed=0,enabled=0 WHERE id=1').run();
+}
+
+/** A valid HMAC-signed Twitch webhook challenge proves callback ownership. */
+export async function confirmChatSubscription(db,subscription){
+  if(subscription?.type!=='channel.chat.message')return false;
+  const broadcaster=String(subscription.condition?.broadcaster_user_id||'');
+  const reader=String(subscription.condition?.user_id||'');
+  if(!/^\d+$/.test(broadcaster)||reader!==broadcaster)return false;
+  await tables(db);
+  const result=await db.prepare('UPDATE chat_bot_state SET subscribed=1 WHERE id=1 AND broadcaster_id=?')
+    .bind(broadcaster).run();
+  return result.meta?.changes===1;
 }
