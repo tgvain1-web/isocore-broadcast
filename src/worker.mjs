@@ -1,3 +1,4 @@
+import {followCommand, safeNick, publicCounts, supporterBanter, chatReply, cleanTelemetry} from './social.mjs';
 /** Isocore Broadcast — independent Cloudflare Worker. No changes to isocore-auth.
  * Public reads are cross-origin. All privileged writes require a bearer secret or a
  * Twitch-signed EventSub message. No stream keys, Discord credentials or OAuth secrets in source.
@@ -37,7 +38,54 @@ async function getCamera(db){
   return c;
 }
 async function getTug(db){return (await db.prepare('SELECT * FROM tug WHERE id=1').first()) || {v:0,at:time(),n:0};}
-async function summary(db){const [camera,tug]=await Promise.all([getCamera(db),getTug(db)]);return {ok:true,camera:{who:camera.who,shot:camera.shot,updated_at:camera.updated_at},tug:stateOf(tug),chat:['igvain'],keyHuntMigrated:false};}
+
+/* Social state is public; identities, secrets and raw Twitch messages are not. */
+async function getSocial(db){
+  const [rows,lines]=await Promise.all([
+    db.prepare('SELECT side, COUNT(*) AS total FROM ai_followers GROUP BY side').all(),
+    db.prepare('SELECT id,who,text,kind,at FROM ai_dialogue ORDER BY id DESC LIMIT 8').all()
+  ]);
+  return {followers:publicCounts(rows.results),dialogue:(lines.results||[]).reverse()};
+}
+async function getTelemetry(db){
+  const row=await db.prepare('SELECT updated_at,payload FROM ai_telemetry WHERE id=1').first();
+  const data=row?JSON.parse(row.payload||'{}'):{};
+  return { ...data, live:!!data.live && time()-Number(row?.updated_at||0)<12, updated_at:Number(row?.updated_at||0) };
+}
+async function utter(db,who,message,kind,eventId,chatterId=''){
+  if(!['ghost','echo'].includes(who))return;
+  const msg=String(message||'').trim().slice(0,240);
+  if(!msg)return;
+  await db.prepare('INSERT OR IGNORE INTO ai_dialogue(who,text,kind,at,event_id,chatter_id) VALUES(?,?,?,?,?,?)')
+    .bind(who,msg,kind,time(),eventId,chatterId).run();
+}
+async function assignFollower(db,side,userId,displayName){
+  const old=await db.prepare('SELECT side FROM ai_followers WHERE user_id=?').bind(userId).first();
+  const previous=old?.side||null;
+  if(previous!==side){
+    const now=time();
+    await db.prepare('INSERT INTO ai_followers(user_id,display_name,side,joined_at,updated_at) VALUES(?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET side=excluded.side, display_name=excluded.display_name, updated_at=excluded.updated_at WHERE ai_followers.side<>excluded.side')
+      .bind(userId,safeNick(displayName),side,now,now).run();
+  }
+  const rows=await db.prepare('SELECT side,COUNT(*) AS total FROM ai_followers GROUP BY side').all();
+  return {previous,counts:publicCounts(rows.results),changed:previous!==side};
+}
+async function lastDialogue(db,kind){
+  return db.prepare('SELECT at FROM ai_dialogue WHERE kind=? ORDER BY at DESC LIMIT 1').bind(kind).first();
+}
+async function sendTwitchBotReply(env,text,replyTo){
+  // Optional opt-in only. The secret is never sent to the browser.
+  if(env.CHAT_REPLIES_ENABLED!=='1'||!env.TWITCH_BOT_ACCESS_TOKEN||!env.TWITCH_CLIENT_ID||!env.TWITCH_BOT_USER_ID||!env.TWITCH_BROADCASTER_ID)return false;
+  const data={broadcaster_id:String(env.TWITCH_BROADCASTER_ID),sender_id:String(env.TWITCH_BOT_USER_ID),message:String(text).slice(0,350)};
+  if(/^[a-f\d-]{12,64}$/i.test(String(replyTo||'')))data.reply_parent_message_id=replyTo;
+  const res=await fetch('https://api.twitch.tv/helix/chat/messages',{
+    method:'POST',headers:{'Authorization':'Bearer '+env.TWITCH_BOT_ACCESS_TOKEN,'Client-Id':String(env.TWITCH_CLIENT_ID),'Content-Type':'application/json'},
+    body:JSON.stringify(data)
+  });
+  return res.ok;
+}
+
+async function summary(db){const [camera,tug,social,telemetry]=await Promise.all([getCamera(db),getTug(db),getSocial(db),getTelemetry(db)]);return {ok:true,camera:{who:camera.who,shot:camera.shot,updated_at:camera.updated_at},tug:stateOf(tug),social,telemetry,chat:['igvain'],keyHuntMigrated:false};}
 async function tally(db,side,msgId,who){
   if(!WHO.has(side) || !/^[\w:-]{6,200}$/.test(msgId) || !/^[\w:-]{1,90}$/.test(who))return false;
   const now=time();
@@ -81,13 +129,55 @@ async function twitchHook(request,env){
   if(typ!=='notification'||data.subscription?.type!=='channel.chat.message')return answer({ok:true,ignored:true});
   const ev=data.event||{};
   if(env.TWITCH_BROADCASTER_ID && String(ev.broadcaster_user_id)!==String(env.TWITCH_BROADCASTER_ID))return fail('Wrong broadcaster',403);
-  const side=parseVote(ev.message?.text);
-  if(!side)return answer({ok:true,vote:false});
-  const id='evt:'+String(request.headers.get('twitch-eventsub-message-id')||'').replace(/[^\w:-]/g,'').slice(0,150);
-  const who='tw:'+String(ev.chatter_user_id||'').replace(/[^\d]/g,'').slice(0,50);
-  if(who.length<4)return fail('Missing Twitch user ID');
-  const accepted=await tally(env.DB,side,id,who);
-  return answer({ok:true,vote:accepted});
+  const messageId=String(request.headers.get('twitch-eventsub-message-id')||'').replace(/[^\w:-]/g,'').slice(0,150);
+  const id='evt:'+messageId;
+  const saved=await env.DB.prepare('INSERT OR IGNORE INTO ai_chat_events(event_id,at) VALUES(?,?)').bind(id,time()).run();
+  if(saved.meta?.changes!==1)return answer({ok:true,duplicate:true});
+  // Never count the bot's own posts as follows, or react to them.
+  if(env.TWITCH_BOT_USER_ID&&String(ev.chatter_user_id)===String(env.TWITCH_BOT_USER_ID))return answer({ok:true,ownBot:true});
+  const chatter='tw:'+String(ev.chatter_user_id||'').replace(/[^\d]/g,'').slice(0,50);
+  if(chatter.length<4)return fail('Missing Twitch user ID');
+  const nick=safeNick(ev.chatter_user_name||ev.chatter_user_login||'viewer');
+  const message=String(ev.message?.text||'').slice(0,400);
+  const side=followCommand(message);
+  let counts, text='', written=false;
+  if(side){
+    const result=await assignFollower(env.DB,side,chatter,nick);
+    counts=result.counts;
+    // Keep existing temporary tug-of-war votes; a follow is persistent even when vote cool-down blocks it.
+    try{await tally(env.DB,side,id,chatter);}catch(e){}
+    if(result.changed){
+      const latest=await lastDialogue(env.DB,'follow');
+      if(!latest||time()-Number(latest.at)>9){
+        const lines=supporterBanter(side,result.previous,counts,nick);
+        for(let i=0;i<lines.length;i++)await utter(env.DB,lines[i].who,lines[i].text,lines[i].kind,id+':'+i,chatter);
+        written=true;
+      }
+    }
+    text='@'+nick+' '+(result.changed?'now follows':'already follows')+' '+side.toUpperCase()+' in Isocore. Ghost '+counts.ghost+' | Echo '+counts.echo+'.';
+  }else{
+    const recent=await env.DB.prepare('SELECT at FROM ai_dialogue WHERE kind=? ORDER BY at DESC LIMIT 1').bind('chat').first();
+    const same=await env.DB.prepare('SELECT at FROM ai_dialogue WHERE kind=? AND chatter_id=? ORDER BY at DESC LIMIT 1').bind('chat',chatter).first();
+    if((!recent||time()-Number(recent.at)>=25)&&(!same||time()-Number(same.at)>=75)){
+      const [social,telemetry]=await Promise.all([getSocial(env.DB),getTelemetry(env.DB)]);
+      const reply=chatReply(message,nick,social.followers,telemetry,messageId.length);
+      if(reply){
+        await utter(env.DB,reply.who,reply.text,'chat',id+':chat',chatter);
+        text=reply.who.toUpperCase()+': '+reply.text;
+        written=true;
+      }
+    }
+  }
+  // Twitch chat sending is disabled unless explicitly configured with OAuth and CHAT_REPLIES_ENABLED=1.
+  // Restrict the bot itself to 1 message every 25 seconds even if on-screen captions update more often.
+  if(text&&env.CHAT_REPLIES_ENABLED==='1'){
+    const last=await env.DB.prepare('SELECT at FROM ai_dialogue WHERE kind=? ORDER BY at DESC LIMIT 1').bind('bot').first();
+    if(!last||time()-Number(last.at)>25){
+      let ok=false;try{ok=await sendTwitchBotReply(env,text,ev.message_id);}catch(e){}
+      if(ok)await utter(env.DB,side||'ghost','Bot posted to Twitch chat','bot',id+':bot',chatter);
+    }
+  }
+  return answer({ok:true,follow:side||null,dialogue:written});
 }
 async function api(request,env,path){
   if(request.method==='OPTIONS')return new Response(null,{status:204,headers:publicHeaders});
@@ -97,6 +187,8 @@ async function api(request,env,path){
   if(request.method==='GET'){
     if(path==='/api/health')return answer({ok:true,service:'isocore-broadcast',database:'ready'});
     if(path==='/api/state')return answer(await summary(db));
+    if(path==='/api/social')return answer({ok:true,...await getSocial(db)});
+    if(path==='/api/telemetry')return answer({ok:true,...await getTelemetry(db)});
     if(path==='/api/control'||path==='/api/camera')return answer({ok:true,...await getCamera(db)});
     if(path==='/api/tug.state')return answer({tug:stateOf(await getTug(db)),chat:['igvain']});
     if(path==='/api/ghost.keys')return answer({keys:null,migrated:false,reason:'Key-hunt data remains on the original PHP website.'});
@@ -104,6 +196,17 @@ async function api(request,env,path){
     return fail('Unknown endpoint',404);
   }
   if(request.method!=='POST')return fail('Method not allowed',405);
+  if(path==='/api/telemetry'){
+    if(!authorized(request,env.TELEMETRY_TOKEN))return fail('Telemetry authorization required',403);
+    let data;try{data=cleanTelemetry(await bodyJSON(request,2048));}catch{return fail('Invalid telemetry payload');}
+    const previous=await getTelemetry(db);
+    const now=time();
+    await db.prepare('UPDATE ai_telemetry SET updated_at=?,payload=? WHERE id=1').bind(now,JSON.stringify(data)).run();
+    if(data.live&&data.lap!==null&&data.lap!==previous.lap){
+      await utter(db,'echo','New lap '+Math.round(data.lap)+'. '+(data.speedKmh!==null?'Speed '+Math.round(data.speedKmh)+' km/h.':'Eyes on the apex.'),'telemetry','lap:'+now+':'+data.lap);
+    }
+    return answer({ok:true,live:data.live,updated_at:now});
+  }
   if(!authorized(request,env.CONTROL_TOKEN))return fail('Owner authorization required',403);
   let data;try{data=await bodyJSON(request);}catch{return fail('Invalid JSON or oversized payload');}
   if(path==='/api/control'){
