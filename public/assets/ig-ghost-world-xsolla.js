@@ -3522,10 +3522,10 @@
         // Retain the older angle as fallback if a monitor model has not loaded.
         if (su.monitorCam) {
           // Orbit the monitor-top reference lens around the seated host, not
-          // in place: Ghost 30 degrees left, Echo 30 degrees right.
+          // in place: Ghost 80 degrees left, Echo 80 degrees right.
           // Keep the same lens-to-host distance, eye-level height and face target.
           var orbit = new T.Vector3(su.monitorCam[0] - e[0], 0, su.monitorCam[2] - e[2]);
-          orbit.applyAxisAngle(new T.Vector3(0, 1, 0), inSuite === 'ghost' ? -Math.PI / 6 : Math.PI / 6);
+          orbit.applyAxisAngle(new T.Vector3(0, 1, 0), inSuite === 'ghost' ? -(4 * Math.PI / 9) : (4 * Math.PI / 9));
           return [[e[0] + orbit.x, su.monitorCam[1], e[2] + orbit.z], [e[0], e[1] + .60, e[2]]];
         }
         // STREAMER CAM: camera is placed beyond the rig's monitor array,
