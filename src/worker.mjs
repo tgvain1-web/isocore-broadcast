@@ -116,6 +116,18 @@ async function twitchAppAccessToken(env){
 }
 async function getStreamContext(env){
   const channel=String(env.TWITCH_CHANNEL_LOGIN||'igvain').trim().toLowerCase();
+  // The owner can set GTA VI before Twitch goes live. Manual override takes
+  // precedence until cleared in the control panel; no OAuth credential needed.
+  try{
+    if(env.DB){
+      const saved=await env.DB.prepare('SELECT game, updated_at FROM stream_game_override WHERE id=1').first();
+      if(saved&&saved.game){
+        return {ok:true,configured:true,channel,live:null,
+          game:String(saved.game).slice(0,100),title:'',
+          updated_at:Number(saved.updated_at||time()),source:'owner'};
+      }
+    }
+  }catch(e){ /* Old installations without migration 0002 remain functional. */ }
   if(!/^[a-z0-9_]{3,25}$/.test(channel))
     return {ok:false,configured:false,reason:'Invalid Twitch channel configuration'};
   if(!env.TWITCH_CLIENT_ID||!env.TWITCH_CLIENT_SECRET)
@@ -174,6 +186,15 @@ async function api(request,env,path){
   if(request.method!=='POST')return fail('Method not allowed',405);
   if(!authorized(request,env.CONTROL_TOKEN))return fail('Owner authorization required',403);
   let data;try{data=await bodyJSON(request);}catch{return fail('Invalid JSON or oversized payload');}
+  if(path==='/api/game'){
+    if(typeof data.game!=='string'||data.game.length>100)return fail('Game name must be 100 characters or fewer');
+    const game=data.game.trim().replace(/[\\r\\n\\t]/g,' ');
+    try{
+      await db.prepare('INSERT INTO stream_game_override (id,game,updated_at) VALUES (1,?,?) ON CONFLICT(id) DO UPDATE SET game=excluded.game,updated_at=excluded.updated_at').bind(game,time()).run();
+    }catch(e){return fail('Game control unavailable: apply D1 migration 0002',503);}
+    streamContextCache.at=0;
+    return answer({ok:true,game,source:game?'owner':'auto'});
+  }
   if(path==='/api/control'){
     if(!validCamera(data))return fail('Invalid camera selection');
     const now=time();
