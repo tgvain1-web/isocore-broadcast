@@ -3,6 +3,14 @@
 <h1>ISOCORE // BROADCAST CONTROL</h1><p>Changes one large live rig camera. This control page requires the private <code>CONTROL_TOKEN</code> configured in Cloudflare. Never paste it into Xsolla or a public stream.</p>
 <fieldset><legend>Owner authentication</legend><label for="tok">Control token (kept only in this tab)</label><input id="tok" type="password" autocomplete="off" placeholder="Your Cloudflare Worker control token"><button id="connect">Connect / Load camera</button></fieldset>
 <fieldset><legend>On-air camera</legend><div class="row"><div><label for="who">Character</label><select id="who"><option value="ghost">Ghost · Gaming rig</option><option value="echo">Echo · Sim-racing rig</option></select></div><div><label for="shot">Angle</label><select id="shot"><option value="first" selected>Streamer cam</option><option value="shoulder">Over shoulder</option><option value="side">Side angle</option><option value="wide">Stage wide</option><option value="high">Jumbotron</option></select></div></div><button id="switch">Switch live camera</button></fieldset>
+<fieldset><legend>Ghost — game-aware commentary</legend>
+<p>Automatic mode reads the current Twitch game category once the stream is live and Twitch API credentials are configured. For launch night, set GTA VI manually if needed. This does not analyse gameplay video.</p>
+<label for="game">Manual game override</label>
+<input id="game" maxlength="100" placeholder="Leave empty for automatic Twitch detection">
+<div class="row"><button id="gta6" type="button">Set GTA VI</button><button id="setGame" type="button">Save game</button></div>
+<button id="clearGame" type="button">Clear override / Automatic mode</button>
+<div class="status" id="gameStatus">Game context not loaded.</div>
+</fieldset>
 <fieldset><legend>Live overlay controls</legend><label for="alert">CORE alert</label><input id="alert" maxlength="160" placeholder="Broadcast announcement"><button id="announce">Send alert</button><div class="row"><button id="ghostVote">Test Ghost vote</button><button id="echoVote">Test Echo vote</button></div><button id="reset">Reset voting meter</button><p>Test votes are owner-only. Live Twitch votes require a verified Twitch EventSub subscription.</p></fieldset>
 <div class="status" id="status">Not connected.</div><p><a href="/preview.html" target="_blank">Open full-size arena preview</a> · <a href="/lightstream.html?debug=1" target="_blank">Preview transparent Lightstream overlay</a> · <a href="/xsolla-setup.html" target="_blank">Generate Xsolla code</a></p>
 <script>
@@ -11,10 +19,33 @@ function status(t){$('status').textContent=t}
 async function load(){try{const d=await call('/api/state');$('who').value=d.camera.who;$('shot').value=d.camera.shot;status('API connected. Camera: '+d.camera.who+' / '+d.camera.shot+'\nTug: '+d.tug.v+'%\nTwitch EventSub not configured until you subscribe.') }catch(e){status(e.message)}}
 $('connect').onclick=()=>{token=$('tok').value.trim();load()};
 async function submit(url,data){try{if(!token)throw Error('Enter your private token before making changes.');let j=await call(url,'POST',data);status('Saved: '+JSON.stringify(j));}catch(e){status('ERROR: '+e.message)}}
+async function loadGame(){
+  try{
+    const v=await call('/api/stream-context');
+    if(v.ok){
+      $('gameStatus').textContent='Game: '+(v.game||'none')+' • Source: '+v.source+
+        (v.live===true?' • Twitch live':v.live===false?' • Twitch offline':'');
+      if(v.source==='owner')$('game').value=v.game;
+    }else{
+      $('gameStatus').textContent=v.reason||'Twitch game detection not configured.';
+    }
+  }catch(e){$('gameStatus').textContent='Game unavailable: '+e.message}
+}
+async function saveGame(game){
+  if(!token){$('gameStatus').textContent='Enter your private token before setting the game.';return;}
+  try{
+    await call('/api/game','POST',{game});
+    $('game').value=game;
+    await loadGame();
+  }catch(e){$('gameStatus').textContent='ERROR: '+e.message}
+}
+$('gta6').onclick=()=>saveGame('Grand Theft Auto VI');
+$('setGame').onclick=()=>saveGame($('game').value);
+$('clearGame').onclick=()=>saveGame('');
 $('switch').onclick=()=>submit('/api/control',{who:$('who').value,shot:$('shot').value});
 $('announce').onclick=()=>submit('/api/alert',{text:$('alert').value});
 $('ghostVote').onclick=()=>submit('/api/test-vote',{side:'ghost'});
 $('echoVote').onclick=()=>submit('/api/test-vote',{side:'echo'});
 $('reset').onclick=()=>submit('/api/reset',{});
-load();
+load();loadGame();
 </script></body></html>
