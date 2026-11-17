@@ -4597,7 +4597,7 @@
       if (prank.key && !local) {                               // the site's prank: give it back for real (members only)
         fetch(ISOCORE_ASSET_BASE + 'api/ghost.mine', { credentials: 'same-origin', cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) {
           if ((!d || !d.csrf) && freeOn()) { if (status) status.textContent = 'Log in with Discord to give it back.'; return; }
-          if (!d || !d.csrf) { drawBubble(ACT[prank.owner].b, prank.owner, 'Log in with Discord and you can give it back to me.', false); ACT[prank.owner].b.sp.visible = true; ACT[prank.owner].b.until = elapsed + 4; return; }
+          if (!d || !d.csrf) { drawBubble(ACT[prank.owner].b, prank.owner, 'Log in with Discord and you can give it back to me.', false); ACT[prank.owner].b.sp.visible = true; ACT[prank.owner].b.until = elapsed + 4; broadcastLine(prank.owner,'Log in with Discord and you can give it back to me.'); return; }
           return fetch(ISOCORE_ASSET_BASE + 'api/unavailable', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': d.csrf }, body: '{}' }).then(function (r) { return r.json(); }).then(function (v) { if (v && v.ok !== false) { if (world.extra) world.extra.prank = false; returnPrank(true); } else clearPrank(); });
         }).catch(function () {});
         return;
@@ -4672,7 +4672,7 @@
             closeNote(); var a = ACT[w]; if (gift) { a.anger = 0; a.angry = false; }
             if (freeOn()) { if (status) status.textContent = (gift ? 'Your gift went to ' : 'Your note went to ') + (w === 'ghost' ? 'Ghost' : 'Echo') + '.'; return; }
             var line = gift ? (w === 'ghost' ? 'For me? ...Thank you. I\'ll keep it safe.' : 'A gift! You\'re officially my favourite.') : (w === 'ghost' ? 'Got it. I\'ll read it when the arena\'s quiet, and write back.' : 'Noted! I\'ll read it between laps and write back.');
-            a.lastSay = elapsed; drawBubble(a.b, w, line, false); a.b.sp.visible = true; a.b.until = elapsed + 5; a.mouth = a.b.until; a.lastLine = line; wake();
+            a.lastSay = elapsed; drawBubble(a.b, w, line, false); a.b.sp.visible = true; a.b.until = elapsed + 5; a.mouth = a.b.until; a.lastLine = line; broadcastLine(w,line); wake();
           });
         });
         if (!STICKS) { try { ta.focus(); } catch (e) {} }
