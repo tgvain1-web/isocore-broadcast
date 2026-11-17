@@ -1842,6 +1842,13 @@
       try { if (ready) resize(); } catch (e) {}
     }
     function present(t) {
+      // Broadcast studio uses an external dialogue caption strip, not floating
+      // 3D speech bubbles that obscure the seated characters / racing rigs.
+      if (SEALED && typeof ACT !== 'undefined' && ACT) {
+        ['ghost','echo'].forEach(function (who) {
+          if (ACT[who] && ACT[who].b && ACT[who].b.sp) ACT[who].b.sp.visible = false;
+        });
+      }
       var now = performance.now();
       // the first few frames compile shaders and are always slow; after that, twelve frames averaging over 50 ms step down
       // one level, and a device managing under 4 frames a second goes straight to the plain town
@@ -4072,6 +4079,8 @@
       return { sp: sp, cv: cv, tx: tx, until: 0 };
     }
     function drawBubble(b, who, text, hot) {
+      // In the broadcast studio captions are handled outside the WebGL scene.
+      if (SEALED) { b.sp.visible = false; return; }
       var g = b.cv.getContext('2d'), w = 768, h = 200, col = hot ? '#ff3b3b' : who === 'echo' ? '#ff9a4d' : '#4fc8f5';
       g.clearRect(0, 0, w, h); g.font = '600 38px system-ui, -apple-system, Segoe UI, sans-serif';
       var words = text.split(' '), lines = [''], i;
@@ -4091,10 +4100,10 @@
     var echoLight = null, echoHalo = null; echoSpirit.traverse(function (o) { if (o.isLight) echoLight = o; });
     echoSpirit.traverse(function (o) { if (o.isSprite && !echoHalo && o.material && o.material.color && o.material.color.getHSL({}).s > .3) echoHalo = o; });
     var ACT = { ghost: actor('ghost', spirit, currentPos, ghostLight, halo, spinner, figure), echo: actor('echo', echoSpirit, echoPos, echoLight, echoHalo, echoSpinner, echoFigure) };
-    // The actual 3D character line becomes a caption INSIDE the camera.
-    // Only the dedicated Lightstream page receives these events.
+    // Broadcast lines become captions immediately UNDER the camera in
+    // both Xsolla/Lightstream and the standalone arena preview.
     function onAirLine(who,text) {
-      if(!document.body.classList.contains('isocore-lightstream') || !text) return;
+      if(!(document.body.classList.contains('isocore-lightstream') || document.body.classList.contains('isocore-preview')) || !text) return;
       try { window.dispatchEvent(new CustomEvent('isocore:dialogue',{detail:{who:who,text:text}})); } catch(e){}
     }
     function isOut(who) { var guest = ACT && ACT[who] && ACT[who].guestUntil > elapsed; return who === 'ghost' ? (typeof ghostOut === 'undefined' || ghostOut || guest) : (echoOn && (typeof echoOut === 'undefined' || echoOut || guest)); }
