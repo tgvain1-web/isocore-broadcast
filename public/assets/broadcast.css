@@ -122,3 +122,46 @@ body.isocore-preview #isocore-broadcast #iso-camera {
 body:not(.isocore-preview) #isocore-broadcast #iso-diag:not(.error) {
   display:none!important;
 }
+
+/* Preview caption strip below camera (not over the character or controls). */
+body.isocore-preview #isocore-broadcast #iso-camera {
+  left:13%!important;
+  top:7%!important;
+  width:74%!important;
+  height:auto!important;
+  max-height:74%!important;
+  aspect-ratio:16/9!important;
+}
+body.isocore-preview #isocore-broadcast #iso-stream-subtitle {
+  box-sizing:border-box!important;
+  position:absolute!important;
+  left:13%!important;
+  right:auto!important;
+  top:calc(81% + 6px)!important;
+  bottom:auto!important;
+  width:74%!important;
+  max-height:calc(19% - 12px)!important;
+  display:flex!important;
+  align-items:flex-start!important;
+  gap:7px!important;
+  padding:6px 9px!important;
+  overflow:hidden!important;
+  font:600 clamp(9px,1.4vw,15px)/1.3 Arial,sans-serif!important;
+  color:#fff!important;
+  background:rgba(5,14,25,.94)!important;
+  border:1px solid #00d4ff88!important;
+  border-left:3px solid #00d4ff!important;
+  border-radius:5px!important;
+  z-index:15!important;
+  pointer-events:none!important;
+}
+body.isocore-preview #isocore-broadcast #iso-stream-subtitle[data-who="echo"] {
+  border-color:#ff9a2e88!important;
+  border-left-color:#ff9a2e!important;
+}
+body.isocore-preview #isocore-broadcast #iso-stream-subtitle .who {
+  flex:none!important;color:#00d4ff!important;font-weight:900!important;white-space:nowrap!important;
+}
+body.isocore-preview #isocore-broadcast #iso-stream-subtitle[data-who="echo"] .who {color:#ffb566!important}
+body.isocore-preview #isocore-broadcast #iso-stream-subtitle .line {flex:1!important;min-width:0!important;overflow-wrap:anywhere!important}
+body.isocore-preview #isocore-broadcast #iso-stream-subtitle[hidden] {display:none!important}
