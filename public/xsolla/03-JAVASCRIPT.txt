@@ -5,7 +5,7 @@
 (function(){
   'use strict';
   var HOST='https://isocore-broadcast.tgvain1.workers.dev';
-  var DEBUG=true, VERSION='15';
+  var DEBUG=true, VERSION='15', hadError=false;
 
   function boot(){
     var root=document.getElementById('isocore-broadcast');
@@ -55,6 +55,8 @@
   }
 
   function report(message,error){
+    if(error)hadError=true;
+    else if(hadError)return;
     try { console[error?'error':'log']('[ISOCORE] '+message); }catch(e){}
     if(!DEBUG&&!error)return;
     var el=document.getElementById('iso-debug-panel');
