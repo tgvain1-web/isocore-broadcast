@@ -72,7 +72,7 @@
     var d=e.detail||{},who=d.who,text=String(d.text||'').trim().slice(0,220);
     // Only explicitly game-sourced lines are allowed on a public stream.
     // Reject all legacy arena/lore/taunts, including stale WebGL events.
-    if((who!=='ghost'&&who!=='echo')||!text||d.source!=='game')return;
+    if((who!=='ghost'&&who!=='echo')||!text||!['game','chat'].includes(d.source))return;
     var key=who+'|'+text,now=Date.now();
     if(key===current&&now-time<8000)return;
     current=key;time=now;
@@ -193,11 +193,32 @@
       })
       .catch(function(){ /* Missing credentials/network: no fictitious game lines. */ });
   }
+  // Mirrored Twitch chat replies: only server-confirmed, sent responses.
+  // No secrets or Twitch posting permissions ever reach Xsolla.
+  var lastChatReplyId='';
+  function pollTwitchReplies(){
+    fetch('https://isocore-broadcast.tgvain1.workers.dev/api/chat/latest',
+      {cache:'no-store',credentials:'omit'})
+      .then(function(r){return r.ok?r.json():null})
+      .then(function(data){
+        var item=data&&data.reply;
+        if(!item||!item.id||item.id===lastChatReplyId)return;
+        lastChatReplyId=item.id;
+        if(!item.reply||!['ghost','echo'].includes(item.who))return;
+        var viewer=String(item.chatter_name||'viewer').slice(0,25);
+        window.dispatchEvent(new CustomEvent('isocore:dialogue',{
+          detail:{who:item.who,source:'chat',
+            text:'@'+viewer+' '+String(item.reply).slice(0,120)}
+        }));
+      }).catch(function(){ /* Bot is optional until Twitch is connected. */ });
+  }
   if(document.body.classList.contains('isocore-lightstream')||
      document.body.classList.contains('isocore-preview')){
     // Defer initial lookup until the 3D engine can mount the camera.
     setTimeout(getGame,9000);
     setInterval(getGame,60000);
     setInterval(commentary,15000);
+    setTimeout(pollTwitchReplies,5000);
+    setInterval(pollTwitchReplies,6000);
   }
 })();
