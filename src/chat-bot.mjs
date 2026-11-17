@@ -114,8 +114,10 @@ async function createSubscription(env,db,appAccessToken){
 }
 export async function finishChatOAuth(request,env,db,getAppToken){
   const u=new URL(request.url),nonce=u.searchParams.get('state'),code=u.searchParams.get('code');
-  const show=(ok,msg)=>new Response('<!doctype html><meta name="viewport" content="width=device-width"><body style="background:#081321;color:#e3faff;font:16px system-ui;padding:30px"><h2>Isocore Broadcast</h2><p>'+msg+'</p><a style="color:#00d4ff" href="/control.html">Back to Owner Controls</a></body>',
-    {status:ok?200:400,headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
+  const show=(ok,msg)=>ok?
+    new Response(null,{status:303,headers:{location:'/control.html?chat=connected','cache-control':'no-store','referrer-policy':'no-referrer'}}):
+    new Response('<!doctype html><meta name="viewport" content="width=device-width"><body style="background:#081321;color:#e3faff;font:16px system-ui;padding:30px"><h2>Isocore Broadcast</h2><p>'+msg+'</p><a style="color:#00d4ff" href="/control.html">Back to Owner Controls</a></body>',
+    {status:400,headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','referrer-policy':'no-referrer','x-content-type-options':'nosniff'}});
   if(!nonce||!code||code.length>2048)return show(false,'Twitch connection was cancelled or invalid.');
   await tables(db);
   const saved=await db.prepare('SELECT created_at FROM chat_oauth_nonce WHERE nonce=?').bind(nonce).first();
@@ -224,4 +226,9 @@ export async function maybeAnswerChat(event,eventId,env,db,ctx,getGameContext){
   if(ctx?.waitUntil)ctx.waitUntil(deliverChatReply(row,env,db,getGameContext));
   else await deliverChatReply(row,env,db,getGameContext);
   return true;
+}
+
+export async function revokeChatSubscription(db){
+  await tables(db);
+  await db.prepare('UPDATE chat_bot_state SET subscribed=0,enabled=0 WHERE id=1').run();
 }
