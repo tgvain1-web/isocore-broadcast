@@ -3521,15 +3521,15 @@
                  e[2] + dz * 1.05]];
       }
       if (name === 'side') {
-        // A studio camera must see the seated host AND their rig. At 2.05m the
-        // cloak was almost touching the lens and blocked half the feed.
-        // Place the camera ~4.6m off the side, slightly behind the cockpit,
-        // and aim between the host's seat and the monitor/wheel assembly.
-        var sideDistance = 5.4, backDistance = 1.8;
+        // SIDE ON: closer three-quarter FRONT view of the seated host.
+        // Shoot across the outer side of the screens (not from behind them)
+        // so the face, seat and cockpit share the frame rather than the arena.
+        // Both rigs use the same mirrored offsets relative to their seats.
+        var forwardOffset = 1.35, sideOffset = 3.25;
         return [
-          [R.x + px * sideDistance - dx * backDistance, e[1] + .55,
-           R.z + pz * sideDistance - dz * backDistance],
-          [R.x + dx * .33, e[1] - .28, R.z + dz * .33]
+          [e[0] + dx * forwardOffset + px * sideOffset, e[1] + .95,
+           e[2] + dz * forwardOffset + pz * sideOffset],
+          [e[0], e[1] + .30, e[2]]
         ];
       }
       if (name === 'wide') return [[R.x * .25, 5.5, 15], [R.x * .8, 1.6, 0]];
