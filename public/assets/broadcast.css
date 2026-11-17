@@ -100,3 +100,25 @@ body.isocore-preview #isocore-broadcast #iso-camera {
   width: 81% !important;
   max-height: 83% !important;
 }
+
+/* V0.6.4 — clean, directly-to-camera broadcast. No arena intro graphics. */
+#isocore-broadcast.isocore-camera-booting #igwHomeSlot {
+  visibility:hidden!important;
+}
+#isocore-broadcast .igw-guide,
+#isocore-broadcast .igw-portal,
+#isocore-broadcast .igw-precover,
+#isocore-broadcast .igw-materialise,
+#isocore-broadcast [aria-label="Loading the arena"] {
+  animation:none!important;
+}
+#isocore-broadcast .igw-guide,
+#isocore-broadcast .igw-portal,
+#isocore-broadcast .igw-precover,
+#isocore-broadcast .igw-mf,
+#isocore-broadcast [aria-label="Loading the arena"] {
+  display:none!important;
+}
+body:not(.isocore-preview) #isocore-broadcast #iso-diag:not(.error) {
+  display:none!important;
+}
