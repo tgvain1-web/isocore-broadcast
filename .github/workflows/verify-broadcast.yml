@@ -124,3 +124,46 @@ jobs:
           # a browser interaction test, which HTTP-only checks cannot simulate.
 
           PY
+
+      - name: Verify GTA VI launch assets are actually deployed
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import urllib.request, urllib.error, json, sys
+          base='https://isocore-broadcast.tgvain1.workers.dev'
+          required={
+            '/control.html': 'Set GTA VI',
+            '/preview.html': 'bridge.js?v=17',
+            '/assets/bridge.js?v=17': 'GHOST // STREAMER CAM',
+            '/assets/lightstream-dialogue.js?v=17': 'Launch-night Ghost commentary',
+            '/assets/ig-ghost-world-xsolla.js?v=17': "['first', 'Streamer cam']",
+          }
+          failed=[]
+          for path,expected in required.items():
+            try:
+              req=urllib.request.Request(base+path,headers={'User-Agent':'Isocore-Launch-Check/1.0','Cache-Control':'no-cache'})
+              with urllib.request.urlopen(req,timeout=15) as r: body=r.read().decode('utf-8','replace')
+              ok=expected in body
+              print(path,'HTTP 200','NEW VERSION' if ok else 'STALE VERSION')
+              if not ok: failed.append(path+': missing launch marker')
+            except Exception as e:
+              print(path,'UNAVAILABLE',repr(e))
+              failed.append(path+': unavailable')
+          try:
+            req=urllib.request.Request(base+'/api/stream-context',headers={'User-Agent':'Isocore-Launch-Check/1.0'})
+            try:
+              with urllib.request.urlopen(req,timeout=15) as r:
+                status=r.status; raw=r.read()
+            except urllib.error.HTTPError as e:
+              status=e.code;raw=e.read()
+            data=json.loads(raw.decode('utf8','replace'))
+            hasShape='configured' in data and (status in (200,503))
+            print('/api/stream-context','HTTP',status,'API PRESENT' if hasShape else 'NOT READY')
+            if not hasShape: failed.append('Game context API stale or unavailable')
+          except Exception as e:
+            failed.append('Game context API check: '+repr(e))
+          if failed:
+            print('GTA VI LAUNCH STATUS: NOT YET DEPLOYED; '+ '; '.join(failed))
+            sys.exit(1)
+          print('GTA VI LAUNCH STATUS: UPDATED ASSETS AND API LIVE (browser/WebGL still needs visual check)')
+          PY
