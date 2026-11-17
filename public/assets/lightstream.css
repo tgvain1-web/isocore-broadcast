@@ -154,3 +154,22 @@ html body.isocore-lightstream #isocore-broadcast #iso-overlay-shell .ov-foot>spa
   font-size:16px!important;
   color:#d9eefa!important;
 }
+
+/* ISOCORE — clean on-air finish: no temporary diagnostic box. */
+html body #iso-debug,
+html body #iso-debug-panel {
+  display:none!important;
+}
+/* Camera name fits at the bottom, even in Xsolla's small mobile preview. */
+html body #isocore-broadcast #iso-camera #iso-camera-label {
+  position:absolute!important;
+  top:auto!important;right:auto!important;bottom:4px!important;left:4px!important;
+  width:max-content!important;max-width:calc(100% - 8px)!important;
+  margin:0!important;padding:2px 4px!important;
+  font:800 clamp(5px,.55vw,10px)/1.1 Arial,sans-serif!important;
+  letter-spacing:-.01em!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:clip!important;
+  border-radius:3px!important;
+}
