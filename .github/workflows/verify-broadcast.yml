@@ -100,7 +100,7 @@ jobs:
                   print('Engine HTTP',e.code)
                   bridge='';engine=''
               if ('id="iso-preview-toggle"' in preview and
-                  'bridge.js?v=11' in preview and
+                  'bridge.js?v=17' in preview and
                   'V0.6.4' in styles and
                   "ROOT.classList.add('isocore-camera-booting')" in bridge and
                   'Isocore Broadcast Studio Key' in engine and
