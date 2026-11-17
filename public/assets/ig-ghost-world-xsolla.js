@@ -103,7 +103,7 @@
     renderer.setClearColor(0x050a16, 1);
     renderer.outputColorSpace = T.SRGBColorSpace;
     renderer.toneMapping = T.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.2;
+    renderer.toneMappingExposure = 1.32; // Broadcast camera exposure: readable rigs without washing out their cyan/orange lighting.
     var scene = new T.Scene();
     scene.background = new T.Color(0x050a16);
     scene.fog = new T.Fog(0x0a1630, 45, 230);
@@ -2086,7 +2086,7 @@
     function hudInit() {
       mapSize(); drawMap();
       var seen = false; try { seen = localStorage.getItem('igw_guide_seen') === '1'; } catch (e) { seen = true; }
-      if (!seen && where() === 'home') openGuide();
+      // Broadcast camera only: no welcome/control helper on the live feed.
     }
 
     // =====================================================================================================================
@@ -3288,23 +3288,33 @@
       still(); wake();
     }
     function leaveBooth() { inBooth = false; myDesk = -1; figsShow(); glassShow(true); stage.classList.remove('igw-in-booth'); seated(false); seatY = 0; seatHome = null; player.x = START.x; player.z = START.z; pyaw = START.yaw; ppitch = START.pitch; still(); wake(); }
-    // BROADCAST V0.2: Three shadow-free neutral-white fixtures brighten the two rigs and the central stage.
-    // Their pools are visible on nearby surfaces, without replacing the blue/orange moving effects.
+    // BROADCAST V0.6.4 — studio key + fill lights local to Ghost and Echo's rigs.
+    // Previously the white spots were ~20m above the rigs at intensity 2.4:
+    // with inverse-square falloff they added almost no usable light.
+    // Place these shadow-free, neutral-white lights close to the rigs instead,
+    // leaving the original cyan/orange show lighting and arena ambience intact.
     var isocoreWhiteSpotsReady = false;
     function addIsocoreWhiteSpots() {
       if (isocoreWhiteSpotsReady) return;
       isocoreWhiteSpotsReady = true;
       [
-        [-16, 18, 8, -19, 1.9, 0, 2.4],
-        [ 16, 18, 8,  19, 1.9, 0, 2.4],
-        [  0, 23, 9,   0, 1.8, 0, 1.35]
+        [-17.3, 8.3, 5.0, -17.2, 1.85, 0, 95],
+        [ 17.3, 8.3, 5.0,  17.2, 1.85, 0, 95],
+        [  0.0, 12.0, 5.0,  0.0, 1.85, 0, 24]
       ].forEach(function (p, i) {
-        var light = new T.SpotLight(0xf5faff, p[6], 44, 0.58, 0.85, 2);
-        light.name = 'Isocore Broadcast Soft White ' + (i + 1);
+        var light = new T.SpotLight(0xf5faff, p[6], 24, i === 2 ? 0.66 : 0.74, 0.75, 2);
+        light.name = 'Isocore Broadcast Studio Key ' + (i + 1);
         light.position.set(p[0], p[1], p[2]);
         light.target.position.set(p[3], p[4], p[5]);
         light.castShadow = false;
         scene.add(light); scene.add(light.target);
+      });
+      [-17.1, 17.1].forEach(function (x, i) {
+        var fill = new T.PointLight(0xf1f8ff, 30, 12, 2);
+        fill.name = 'Isocore Broadcast Rig Fill ' + (i ? 'Echo' : 'Ghost');
+        fill.position.set(x, 3.8, -1.5);
+        fill.castShadow = false;
+        scene.add(fill);
       });
     }
     function placeSuites() {
@@ -3490,7 +3500,7 @@
       if (document.hidden) return;
       var mySeat = seatLock && seatHome && !inSuite ? [Math.round(seatHome.x * 100) / 100, Math.round(seatHome.z * 100) / 100, Math.round(seatHome.y * 100) / 100] : null;
       fetch(ISOCORE_ASSET_BASE + 'api/unavailable', { method: 'POST', credentials: 'same-origin', cache: 'no-store', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ seat: mySeat }) }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
-        if (!v || !v.arena) return; world.extra.arena = v.arena; arenaNews(); try { renderViewers(); introCheck(); } catch (e) {}
+        if (!v || !v.arena) return; world.extra.arena = v.arena; arenaNews(); try { renderViewers(); } catch (e) {}
       }).catch(function () {});
     }
     function arenaNews() {
@@ -3624,8 +3634,8 @@
       hudActions.insertBefore(qBtn, muteBtn);
       // visitors cannot get onto the stage (README-ADMIN 276): its footprint is solid for everyone but the Owner
       if (!isHost && stageRoots.main) { try { stageRoots.main.updateMatrixWorld(true); var sbb = new T.Box3().setFromObject(stageRoots.main), sc0 = sbb.getCenter(new T.Vector3()), ss0 = sbb.getSize(new T.Vector3()); var sso = [sc0.x, sc0.z, ss0.x / 2 + .3, ss0.z / 2 + .3, 0]; PLAYER_SOLIDS.push(sso); modelInfo.stageBlock = [Math.round(ss0.x), Math.round(ss0.z)]; } catch (e) {} }
-      setTimeout(function () { mainframe(isHost ? 'Broadcast systems ready, IG-Mainframe.' : isMod ? 'Mod booth online. Stream and chat on your desk.' : (function () { var me = (wrap0 && wrap0.dataset.regular) || ''; return 'Link established. Welcome to the arena' + (me ? ', ' + me : '') + '. ' + (seatY ? 'Seat assigned.' : 'Standing room on the floor.'); })()); }, 1200);
-      stage.classList.add('igw-materialise'); setTimeout(function () { stage.classList.remove('igw-materialise'); }, 1600);
+      // No startup Mainframe text in the live camera feed; regular alerts remain active.
+      // No arena entrance/materialisation animation on the live camera.
       setInterval(mfWatch, 5000); setInterval(mfIdle, 210000 + Math.random() * 60000);
       modelInfo.spawn = { host: isHost, seated: !!seatY }; try { arenaPing(); setInterval(arenaPing, 60000); if (!isHost) makeWatch(); } catch (e) {}
       cityReady = true; router = null;
@@ -3776,7 +3786,8 @@
     function loadModels() {
       var names = Object.keys(world.models).filter(function (n) { return MODEL_SLOTS[n]; });
       if (!names.length) return;
-      if (!cover) coverShow(names.length);
+      // Suppress the in-world loading-logo intro. Keep model progress internal.
+      coverN = names.length;
       names.forEach(function (n) { modelInfo[n] = { state: 'loading' }; });
       var left = names.length, got = {};
       function done() {
@@ -4382,7 +4393,7 @@
     function unlockAudio() {
       if (audioOn) return; audioOn = true;
       try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { actx = null; }
-      streamSound(); introCheck();
+      streamSound(); // Broadcast camera: do not play the Mainframe entrance sting.
       if (mfLast && Date.now() - mfAt < 8000) coreSay(mfLast);
     }
     ['pointerdown', 'keydown', 'touchend'].forEach(function (ev) { stage.addEventListener(ev, unlockAudio, { passive: true }); });
