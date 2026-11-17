@@ -119,8 +119,8 @@ async function twitchAppAccessToken(env){
 // unrelated Twitch game names are never silently changed.
 export function canonicalGameName(value){
   const clean=String(value||'').normalize('NFKC')
-    .replace(/[\\u0000-\\u001f\\u007f]/g,' ')
-    .replace(/\\s+/g,' ').trim().slice(0,100);
+    .split('').map(c=>{const n=c.charCodeAt(0);return n<32||n===127?' ':c;}).join('')
+    .trim().replace(/ +/g,' ').slice(0,100);
   const key=clean.toLowerCase().replace(/[^a-z0-9]/g,'');
   if(['gtavi','gta6','grandtheftautovi','grandtheftauto6'].includes(key)||
      /^g[a-z]{0,4}thef[a-z]{0,4}au[a-z]{0,3}(?:vi|6)$/.test(key)){
