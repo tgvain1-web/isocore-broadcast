@@ -3358,7 +3358,9 @@
             }
             towardHost.normalize();
             var lens = screenCentre.clone().addScaledVector(towardHost, .38); // An additional 5 cm back for both monitor-top cameras.
-            lens.y = screenBox.max.y + .22;
+            // Ghost eye-level lens: match the height of the eye-line camera target.
+            // Echo keeps the existing monitor-top height and framing.
+            lens.y = c[0] === 'ghost' ? seatedAt[1] + .60 : screenBox.max.y + .22;
             SUITES[c[0]].monitorCam = [lens.x, lens.y, lens.z];
           }
         }
