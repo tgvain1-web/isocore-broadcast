@@ -1341,14 +1341,14 @@
         var t = (filmPose && filmPose.ghost) || onAir('ghost') || lifeGoal('ghost') || (SEALED ? [-14.5, 2.2] : PLACES[world.where].at); goal.set(t[0], 0, t[1]);      // in the arena his home is his station
         var studioGhostSeat = SEALED && SUITES.ghost && SUITES.ghost.seat;
         var before = currentPos.clone();
-        if (studioGhostSeat) currentPos.set(studioGhostSeat[0], 0, studioGhostSeat[2]);
+        if (studioGhostSeat) { var gs=SUITES.ghost.avatarSeat||studioGhostSeat; currentPos.set(gs[0], 0, gs[2]); }
         else currentPos.lerp(goal, .012);
         var dx = currentPos.x - before.x, dz = currentPos.z - before.z, walking = dx * dx + dz * dz > .000004;
-        spirit.position.set(currentPos.x, studioGhostSeat ? studioGhostSeat[1] - 1.02 : .13 + floorAt(currentPos.x, currentPos.z) + Math.sin(elapsed * 1.25 * pace) * .09, currentPos.z);
+        spirit.position.set(currentPos.x, studioGhostSeat ? studioGhostSeat[1] - 1.16 : .13 + floorAt(currentPos.x, currentPos.z) + Math.sin(elapsed * 1.25 * pace) * .09, currentPos.z);
         blinkers.forEach(function (b, i) { b.visible = Math.sin(elapsed * 2.4 + i) > .55 && !(b.userData.fx && qual === 0); }); fireLights.forEach(function (f, i) { if (f.isLight) f.intensity = 8 + Math.sin(elapsed * 13 + i) * 3; else f.scale.set(1, 1 + Math.sin(elapsed * 11) * .18, 1); }); waters.forEach(function (w) { w.material.opacity = .55 + Math.sin(elapsed * 3) * .15; });
         var pulse = .5 + Math.sin(elapsed * 2.1) * .5, nearGhost = Math.max(0, 1 - Math.hypot(player.x - currentPos.x, player.z - currentPos.z) / 8); halo.material.opacity = .24 + pulse * .14; spark.scale.setScalar(1.0 + pulse * .25 + nearGhost * .12); heart.scale.set(.15 + pulse * .015, .15 + pulse * .015, .1); spinner.rotation.z = elapsed * .22; figure.rotation.z = Math.sin(elapsed * .7 * pace) * .05 * pace; figure.rotation.x = -.1 * nearGhost; clouds.rotation.y = elapsed * .003;
         spirit.rotation.y = filmCam ? Math.atan2(camera.position.x - currentPos.x, camera.position.z - currentPos.z) : (onAir('ghost') && SUITES.ghost && Math.hypot(currentPos.x - SUITES.ghost.seat[0], currentPos.z - SUITES.ghost.seat[2]) < 1.2 ? SUITES.ghost.yaw : lifeFace('ghost', currentPos, elapsed));
-        if (inSuite === 'ghost' && camShot === 'first') { spirit.visible = false; suiteHid.ghost = true; } else if (suiteHid.ghost) { spirit.visible = true; suiteHid.ghost = false; }
+        if (spirit.userData.character) spirit.userData.character.visible = !(inSuite === 'ghost' && camShot === 'first');
         shadow.position.set(currentPos.x, .125, currentPos.z); dust.rotation.y = elapsed * .007;
         beacon.material = Math.sin(elapsed * 2.2) > .2 ? mats.light : mats.off;
         slot.material = world.where === 'post' && Math.sin(elapsed * 3) > 0 ? mats.white : mats.warm;
@@ -2115,12 +2115,12 @@
       if (!echoOn && !studioEchoSeat) return;
       if (echoSpinner) echoSpinner.rotation.z = -t * .22;
       var w = (filmPose && filmPose.echo) || onAir('echo') || lifeGoal('echo') || (SEALED ? [14.5, 2.2] : (X.echo && ECHO_AT[X.echo.where]) || ECHO_AT.finish);
-      if (studioEchoSeat) echoPos.set(studioEchoSeat[0], 0, studioEchoSeat[2]);
+      if (studioEchoSeat) { var es=SUITES.echo.avatarSeat||studioEchoSeat; echoPos.set(es[0], 0, es[2]); }
       else echoPos.lerp(new T.Vector3(w[0], 0, w[1]), .012);
       if (echoFigure) echoFigure.rotation.x = -.1 * Math.max(0, 1 - Math.hypot(player.x - echoPos.x, player.z - echoPos.z) / 8);
-      echoSpirit.position.set(echoPos.x, studioEchoSeat ? studioEchoSeat[1] - 1.02 : .13 + floorAt(echoPos.x, echoPos.z) + Math.sin(t * 1.9 + 1.3) * .11, echoPos.z);
+      echoSpirit.position.set(echoPos.x, studioEchoSeat ? studioEchoSeat[1] - 1.16 : .13 + floorAt(echoPos.x, echoPos.z) + Math.sin(t * 1.9 + 1.3) * .11, echoPos.z);
       echoSpirit.rotation.y = filmCam ? Math.atan2(camera.position.x - echoPos.x, camera.position.z - echoPos.z) : (onAir('echo') && SUITES.echo && Math.hypot(echoPos.x - SUITES.echo.seat[0], echoPos.z - SUITES.echo.seat[2]) < 1.2 ? SUITES.echo.yaw : lifeFace('echo', echoPos, t));
-      if (inSuite === 'echo' && camShot === 'first') { echoSpirit.visible = false; suiteHid.echo = true; } else if (suiteHid.echo) { echoSpirit.visible = true; suiteHid.echo = false; }
+      if (echoSpirit.userData.character) echoSpirit.userData.character.visible = !(inSuite === 'echo' && camShot === 'first');
     }
     (function () { var w = (X.echo && ECHO_AT[X.echo.where]) || ECHO_AT.finish; echoPos.set(w[0], 0, w[1]); echoSpirit.position.set(w[0], .13, w[1]); })();
 
@@ -3361,9 +3361,23 @@
         var cv = (scr.stream || scr.live || {}).cv || document.createElement('canvas'), tx = (scr.stream || scr.live || {}).tx;
         addModel(root); var so = [c[2], 0, 1.1, 1.3, c[3]]; so.keep = 1; SOLIDS.push(so);
         var dir = c[3] > 0 ? 1 : -1;      // the chair side points to the middle of the stage
-        SUITES[c[0]] = { root: root, cv: cv, tx: tx, scr: scr, back: 0, side: c[6], seat: [c[2] + dir * c[4], c[5] + y, 0], yaw: dir > 0 ? -Math.PI / 2 : Math.PI / 2 };
+        var syaw=dir>0?-Math.PI/2:Math.PI/2, seated=[c[2]+dir*c[4],c[5]+y,0];
+         // Seat the visible avatar against the back of the rig, not ahead of its cushion.
+         var avatarSeat=[seated[0]-Math.sin(syaw)*.16,seated[1],seated[2]+Math.cos(syaw)*.16];
+         SUITES[c[0]] = {root:root,cv:cv,tx:tx,scr:scr,back:0,side:c[6],seat:seated,avatarSeat:avatarSeat,yaw:syaw};
       });
-      // where their free will can take them now (lib/ghost.php ghost_will_haunts): the stage, their rigs, the screens, the stands
+      // A standing hooded cloak extends through a chair. Cut just its low section
+       // against each cushion while preserving its torso in third-person shots.
+       renderer.localClippingEnabled=true;
+       [['ghost',spirit],['echo',echoSpirit]].forEach(function(pair){
+         var suite=SUITES[pair[0]],avatar=pair[1].userData.character;if(!suite||!avatar)return;
+         var cut=new T.Plane(new T.Vector3(0,1,0),-(suite.seat[1]-.32));
+         avatar.traverse(function(o){if(!o.isMesh||!o.material)return;
+           var apply=function(m){var copy=m.clone();copy.clippingPlanes=[cut];copy.clipShadows=false;return copy;};
+           o.material=Array.isArray(o.material)?o.material.map(apply):apply(o.material);
+         });
+       });
+       // where their free will can take them now (lib/ghost.php ghost_will_haunts): the stage, their rigs, the screens, the stands
       HAUNTS.ghost = [[-16.8, 1.6, 'at the station'], [-5, .8, 'on the stage'], [-6, 6.5, 'at the front of the stage'], [-24, 3, 'under the big screen'], [-2, 4, 'under the jumbotron'], [-12, 22, 'by the stands']];
       HAUNTS.echo = [[16.8, 1.6, 'at the sim rig'], [5, .8, 'on the stage'], [6, 6.5, 'at the front of the stage'], [24, 3, 'under the big screen'], [2, 4, 'under the jumbotron'], [12, 22, 'by the stands']];
       WILL_AT.ghost = { station: [-16.8, 1.6], stage: [-5, .8], front: [-6, 6.5], screen: [-24, 3], jumbo: [-2, 4], stands: [-12, 22], echo: [11, 1.2], edge: [-6, -25] };
@@ -3499,7 +3513,7 @@
     function shotOf(name) {
       if (!SUITES) return null; var su = SUITES[inSuite]; if (!su) return null;
       var dx = Math.sin(su.yaw), dz = -Math.cos(su.yaw), px = -dz, pz = dx, e = su.seat, R = su.root.position;
-      if (name === 'first') { var bk = su.back || 0; return [[e[0] - dx * bk, e[1] + .06, e[2] - dz * bk], [e[0] + dx * 4, e[1] - .35, e[2] + dz * 4]]; }
+      if (name === 'first') { var bk = su.back || 0; return [[e[0] + dx * (.18 - bk), e[1] + .50, e[2] + dz * (.18 - bk)], [e[0] + dx * 4, e[1] + .08, e[2] + dz * 4]]; }
       if (name === 'shoulder') return [[e[0] - dx * 1.5 + px * .45, e[1] + .45, e[2] - dz * 1.5 + pz * .45], [R.x + dx * .6, e[1] - .15, R.z + dz * .6]];
       if (name === 'side') return [[R.x + px * 2.05 - dx * .3, e[1] + .12, R.z + pz * 2.05 - dz * .3], [R.x + dx * .12, e[1] - .05, R.z + dz * .12]];
       if (name === 'wide') return [[R.x * .25, 5.5, 15], [R.x * .8, 1.6, 0]];
@@ -4048,6 +4062,10 @@
     var echoLight = null, echoHalo = null; echoSpirit.traverse(function (o) { if (o.isLight) echoLight = o; });
     echoSpirit.traverse(function (o) { if (o.isSprite && !echoHalo && o.material && o.material.color && o.material.color.getHSL({}).s > .3) echoHalo = o; });
     var ACT = { ghost: actor('ghost', spirit, currentPos, ghostLight, halo, spinner, figure), echo: actor('echo', echoSpirit, echoPos, echoLight, echoHalo, echoSpinner, echoFigure) };
+     function broadcastLine(who,text){
+       if(!document.getElementById('isocore-broadcast')||!text)return;
+       try{window.dispatchEvent(new CustomEvent('isocore:dialogue',{detail:{who:who,text:text}}));}catch(e){}
+     }
     function isOut(who) { var guest = ACT && ACT[who] && ACT[who].guestUntil > elapsed; return who === 'ghost' ? (typeof ghostOut === 'undefined' || ghostOut || guest) : (echoOn && (typeof echoOut === 'undefined' || echoOut || guest)); }
     // Free will (Scout's PC on): nothing scripted is said. They only say the lines they wrote themselves with their last choice:
     // what they said about it, four more things to say while they are at it, and what to say to a member who walks up.
@@ -4063,11 +4081,11 @@
     }
     function speak(a, kind, force) { if (filmPose) return;
       var t = elapsed; if (!force && t - a.lastSay < 7) return;
-      if (freeOn()) { if (!force && t - a.lastSay < 18) return; var own = freeLine(a, kind); if (!own) return; a.lastSay = t; drawBubble(a.b, a.who, own, a.angry); a.b.sp.visible = true; a.b.until = t + Math.max(3.5, own.length * .075); a.mouth = a.b.until; a.lastLine = own; return; }
+      if (freeOn()) { if (!force && t - a.lastSay < 18) return; var own = freeLine(a, kind); if (!own) return; a.lastSay = t; drawBubble(a.b, a.who, own, a.angry); a.b.sp.visible = true; a.b.until = t + Math.max(3.5, own.length * .075); a.mouth = a.b.until; a.lastLine = own; broadcastLine(a.who,own); return; }
       var list = LINES[a.who][kind]; if (!list) return; var text = fill(pickOne(list), a.who); a.lastSay = t;
       drawBubble(a.b, a.who, text, a.angry || kind === 'angry'); a.b.sp.visible = true; a.b.until = t + Math.max(3.5, text.length * .075); a.mouth = a.b.until;
       
-      a.lastLine = text;
+      a.lastLine = text; broadcastLine(a.who,text);
     }
     function shoutLine(who, text) {
       ticker.textContent = ''; ticker.appendChild(el('b', 'igw-ticker-' + who, who === 'echo' ? 'ECHO' : 'GHOST')); ticker.appendChild(document.createTextNode(' ' + text));
@@ -4194,9 +4212,11 @@
         // A chair is normally marked solid for walking. Seated hosts are deliberately exempt
         // from collision push-out; otherwise both characters get pushed BESIDE their rigs.
         var occupiedSeat = SEALED && SUITES[w] && SUITES[w].seat;
-        if (occupiedSeat) a.pos.set(occupiedSeat[0], 0, occupiedSeat[2]);
+        if (occupiedSeat) {var seatAnchor=SUITES[w].avatarSeat||occupiedSeat;a.pos.set(seatAnchor[0],0,seatAnchor[2]);}
         else keepOut(a.pos);
-        a.obj.position.x = a.pos.x; a.obj.position.z = a.pos.z; if (w === 'ghost') shadow.position.set(a.pos.x, .125, a.pos.z);
+        // Keep the character visible from side view, but not from inside its own head.
+         if(a.obj.userData.character)a.obj.userData.character.visible=out&&!(inSuite===w&&camShot==='first');
+         a.obj.position.x = a.pos.x; a.obj.position.z = a.pos.z; if (w === 'ghost') shadow.position.set(a.pos.x, .125, a.pos.z);
         if (a.b.sp.visible && (t > a.b.until || !out)) a.b.sp.visible = false;
         if (a.b.sp.visible) { var bd = Math.hypot(camera.position.x - a.pos.x, camera.position.z - a.pos.z), bs = Math.max(1.3, Math.min(4.6, bd * .3)); a.b.sp.scale.set(bs, bs * .262, 1); a.b.sp.position.y = 2.6 + bs * .24; }      /* a bubble is the same size on screen near or far, never a wall of text in your face */
         if (!out) { a.anger = 0; a.angry = false; return; }
@@ -4209,7 +4229,7 @@
         // talk
         if (a.act === 'visit' && a.visitSay && Math.hypot(a.target[0] - a.pos.x, a.target[1] - a.pos.z) < 2.5) { a.visitSay = false; speak(a, 'visit', true); }
         else if (a.act === 'greet' && a.greetName && pd < 6.5) { a.greetName = false; speak(a, 'greetYou', true); }
-        else if (a.act === 'will' && a.willSay && Math.hypot(a.target[0] - a.pos.x, a.target[1] - a.pos.z) < 2.5 && pd < 24) { var ws = a.willSay; a.willSay = ''; a.lastSay = t; drawBubble(a.b, a.who, ws, a.angry); a.b.sp.visible = true; a.b.until = t + Math.max(4, ws.length * .075); a.mouth = a.b.until; a.lastLine = ws; }
+        else if (a.act === 'will' && a.willSay && Math.hypot(a.target[0] - a.pos.x, a.target[1] - a.pos.z) < 2.5 && pd < 24) { var ws = a.willSay; a.willSay = ''; a.lastSay = t; drawBubble(a.b, a.who, ws, a.angry); a.b.sp.visible = true; a.b.until = t + Math.max(4, ws.length * .075); a.mouth = a.b.until; a.lastLine = ws; broadcastLine(a.who,ws); }
         else if (a.act === 'greet' && pd < 6.5 && t - a.lastSay > 9) speak(a, 'greet');
         else if (a.act === 'rival' && a.spread && r.angry && Math.hypot(r.pos.x - a.pos.x, r.pos.z - a.pos.z) < 6 && t - a.lastSay > 6) { speak(a, 'rivalAngry', true); r.anger = Math.max(0, Math.min(1, r.anger + (a.spread === 'calm' ? -.25 : .15))); a.spread = ''; }
         else if (a.act === 'rival' && isOut(r.who) && Math.hypot(r.pos.x - a.pos.x, r.pos.z - a.pos.z) < 6 && t - Math.max(a.lastSay, r.lastSay) > 5) speak(a, 'rival');
@@ -4825,7 +4845,7 @@
       }
       if (t < chat.at) return;
       var l = chat.lines[chat.n++]; if (!l) { chat = null; nextChat = t + 70 + Math.random() * 80; return; }
-      var a = ACT[l[0]]; var text = sFill(l[1]); a.lastSay = t; drawBubble(a.b, a.who, text, a.angry); a.b.sp.visible = true; a.b.until = t + 4.6; a.mouth = a.b.until; a.lastLine = text;
+      var a = ACT[l[0]]; var text = sFill(l[1]); a.lastSay = t; drawBubble(a.b, a.who, text, a.angry); a.b.sp.visible = true; a.b.until = t + 4.6; a.mouth = a.b.until; a.lastLine = text; broadcastLine(a.who,text);
       chat.at = t + 5;
     }
 
