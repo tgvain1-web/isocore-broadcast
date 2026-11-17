@@ -3501,7 +3501,18 @@
       var dx = Math.sin(su.yaw), dz = -Math.cos(su.yaw), px = -dz, pz = dx, e = su.seat, R = su.root.position;
       if (name === 'first') { var bk = su.back || 0; return [[e[0] - dx * bk, e[1] + .06, e[2] - dz * bk], [e[0] + dx * 4, e[1] - .35, e[2] + dz * 4]]; }
       if (name === 'shoulder') return [[e[0] - dx * 1.5 + px * .45, e[1] + .45, e[2] - dz * 1.5 + pz * .45], [R.x + dx * .6, e[1] - .15, R.z + dz * .6]];
-      if (name === 'side') return [[R.x + px * 2.05 - dx * .3, e[1] + .12, R.z + pz * 2.05 - dz * .3], [R.x + dx * .12, e[1] - .05, R.z + dz * .12]];
+      if (name === 'side') {
+        // A studio camera must see the seated host AND their rig. At 2.05m the
+        // cloak was almost touching the lens and blocked half the feed.
+        // Place the camera ~4.6m off the side, slightly behind the cockpit,
+        // and aim between the host's seat and the monitor/wheel assembly.
+        var sideDistance = 4.6, backDistance = 1.25;
+        return [
+          [R.x + px * sideDistance - dx * backDistance, e[1] + .55,
+           R.z + pz * sideDistance - dz * backDistance],
+          [R.x + dx * .33, e[1] - .28, R.z + dz * .33]
+        ];
+      }
       if (name === 'wide') return [[R.x * .25, 5.5, 15], [R.x * .8, 1.6, 0]];
       return [[0, 15.5, 9], [R.x * .55, 1.4, 0]];
     }
