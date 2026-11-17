@@ -3813,7 +3813,7 @@
       // In Lightstream's live browser source, fetch only the arena and six things
       // needed to render both hosts and their rigs. The full interactive world,
       // original preview and ?models=all keep every model unchanged.
-      var liveOverlay = /\/lightstream\.html$/i.test(location.pathname);
+      var liveOverlay = /\/lightstream\.html$/i.test(location.pathname) || document.body.classList.contains('isocore-lightstream');
       var allModels = false;
       try { allModels = new URLSearchParams(location.search).get('models') === 'all'; } catch (e) {}
       if (liveOverlay && !allModels) {
