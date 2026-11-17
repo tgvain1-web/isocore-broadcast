@@ -173,3 +173,54 @@ html body #isocore-broadcast #iso-camera #iso-camera-label {
   text-overflow:clip!important;
   border-radius:3px!important;
 }
+
+/* DIALOGUE STRIP — OUTSIDE / UNDER THE 500x281 CAMERA
+   1920x1080 source: camera top 12% (130px), height 281px.
+   Caption starts 8px below its bottom; aligned to its 500px width. */
+html body #isocore-broadcast #iso-stream-subtitle {
+  box-sizing:border-box!important;
+  position:absolute!important;
+  top:calc(12% + 26.018519% + 8px)!important;
+  bottom:auto!important;
+  left:auto!important;
+  right:2.8%!important;
+  width:26.041667%!important;
+  max-width:none!important;
+  max-height:100px!important;
+  display:flex!important;
+  align-items:flex-start!important;
+  gap:7px!important;
+  padding:7px 9px!important;
+  overflow:hidden!important;
+  font:600 clamp(8px,.68vw,13px)/1.3 Arial,sans-serif!important;
+  color:#f5faff!important;
+  background:rgba(5,14,25,.94)!important;
+  border:1px solid rgba(0,212,255,.45)!important;
+  border-left:3px solid #00d4ff!important;
+  border-radius:6px!important;
+  box-shadow:0 4px 12px #0008!important;
+  pointer-events:none!important;
+  z-index:12!important;
+}
+html body #isocore-broadcast #iso-stream-subtitle[data-who="echo"] {
+  border-left-color:#ff9a2e!important;
+  border-color:rgba(255,154,46,.5)!important;
+  border-left:3px solid #ff9a2e!important;
+}
+html body #isocore-broadcast #iso-stream-subtitle .who {
+  flex:none!important;
+  color:#00d4ff!important;
+  font-weight:900!important;
+  white-space:nowrap!important;
+}
+html body #isocore-broadcast #iso-stream-subtitle[data-who="echo"] .who {
+  color:#ffb566!important;
+}
+html body #isocore-broadcast #iso-stream-subtitle .line {
+  flex:1!important;
+  min-width:0!important;
+  overflow-wrap:anywhere!important;
+}
+html body #isocore-broadcast #iso-stream-subtitle[hidden] {
+  display:none!important;
+}
