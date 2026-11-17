@@ -1,184 +1,192 @@
-/* ISOCORE BROADCAST: Xsolla Code / CSS tab. Transparent, full-stage, click-through.
- * Put THIS in Xsolla's CSS tab, not in HTML or JavaScript.
- * Camera defaults to small right-side picture-in-picture above gameplay.
- */
-html,body{margin:0!important;padding:0!important;width:100%!important;height:100%!important;background:transparent!important;overflow:hidden!important}
-#isocore-broadcast{position:fixed!important;inset:0!important;width:100%!important;height:100%!important;overflow:hidden!important;pointer-events:none!important;z-index:9999!important;background:transparent!important}
-#isocore-broadcast .isocore-setup-diag{position:absolute;right:2%;bottom:5%;font:700 14px Arial;color:#d9f0ff;background:#081827ee;border:1px solid #00d4ff;border-radius:5px;padding:8px 12px;z-index:90}
-/* On-air diagnostics hidden. To inspect an Xsolla editor fault, remove the display:none rule temporarily. */
-body.isocore-lightstream #isocore-broadcast .isocore-setup-diag{display:none!important}
-/* Lightstream browser source: alpha-transparent 1920x1080 compositor.
- * NO preview backdrop, controls, in-world loading splash, or secret keys.
- * This file only applies to /lightstream.html and does not alter /preview.html.
- */
-html,body{position:relative;margin:0!important;padding:0!important;width:100%;height:100%;overflow:hidden;background:transparent!important;color:transparent}
-body.isocore-lightstream #isocore-broadcast{
- position:fixed!important;inset:0!important;width:100%!important;height:100%!important;
- background:transparent!important;border:0!important;box-shadow:none!important;
- pointer-events:none!important;overflow:hidden!important;
+/* ISOCORE BROADCAST — COMPLETE XSOLLA CSS
+   Master canvas: 1920 x 1080
+   Ghost/Echo camera: 500 x 281 (near 16:9)
+   Layout: upper-right camera, bottom-left website
+*/
+
+/* Transparent overlay; gameplay shows through. */
+html, body {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  overflow: hidden !important;
+  background: transparent !important;
 }
-/* A 34%-wide live camera leaves the centre of the PS5 gameplay visible. */
-body.isocore-lightstream #isocore-broadcast #iso-camera{
- position:absolute!important;left:auto!important;right:2.6%!important;top:18%!important;
- width:34%!important;max-height:70%!important;
- aspect-ratio:16/9!important;transform:none!important;
- background:#07111e!important;isolation:isolate;
- box-shadow:0 7px 26px #0009,0 0 22px #00d4ff24!important;
-}
-body.isocore-lightstream #isocore-broadcast #iso-camera.echo{
- box-shadow:0 7px 26px #0009,0 0 22px #ff9a2e33!important;
-}
-body.isocore-lightstream #isocore-broadcast #iso-camera .igw-canvas{
- filter:brightness(1.18) saturate(1.08);
-}
-body.isocore-lightstream #isocore-broadcast #iso-overlay-shell{
- background:transparent!important;
-}
-body.isocore-lightstream #isocore-broadcast #iso-camera-label{
- bottom:12px!important;top:auto!important;left:12px!important;
- font-size:clamp(10px,.8vw,14px)!important;
- z-index:6!important;
-}
-body.isocore-lightstream #isocore-broadcast #iso-diag{
- display:none!important;
-}
-body.isocore-lightstream-debug #isocore-broadcast #iso-diag{
- display:block!important;z-index:100!important;right:1%!important;bottom:1%!important;
-}
-body.isocore-lightstream #isocore-broadcast .igw-guide,
-body.isocore-lightstream #isocore-broadcast .igw-precover,
-body.isocore-lightstream #isocore-broadcast [aria-label="Loading the arena"],
-body.isocore-lightstream #isocore-broadcast .igw-portal,
-body.isocore-lightstream #isocore-broadcast .igw-mf,
-body.isocore-lightstream #isocore-broadcast .igw-cams{
- display:none!important;
-}
-/* Dialogue captions stay INSIDE the camera image rather than covering gameplay. */
-body.isocore-lightstream #isocore-broadcast #iso-stream-subtitle{
- position:absolute;z-index:7;bottom:52px;left:3%;right:3%;display:flex;align-items:start;gap:8px;
- padding:9px 11px;border-radius:6px;
- color:#f5faff;background:rgba(2,9,18,.90);
- border-left:4px solid #00d4ff;box-shadow:0 2px 14px #0008;
- font:600 clamp(10px,.82vw,16px)/1.35 "Segoe UI",Arial,sans-serif;
- text-shadow:0 1px 3px #000;letter-spacing:0;
-}
-body.isocore-lightstream #isocore-broadcast #iso-stream-subtitle[data-who="echo"]{border-left-color:#ff9a2e}
-body.isocore-lightstream #isocore-broadcast #iso-stream-subtitle .who{color:#00d4ff;font-weight:900;white-space:nowrap}
-body.isocore-lightstream #isocore-broadcast #iso-stream-subtitle[data-who="echo"] .who{color:#ffb566}
-body.isocore-lightstream #isocore-broadcast #iso-stream-subtitle .line{overflow-wrap:anywhere;flex:1}
-body.isocore-lightstream #isocore-broadcast #iso-stream-subtitle[hidden]{display:none!important}
-/* Large-angle layout is available without altering the stage code: ?layout=large */
-body.isocore-lightstream-large #isocore-broadcast #iso-camera{
- left:2%!important;right:auto!important;top:17%!important;width:69%!important;max-height:76%!important;
-}
-@media(max-width:850px){
- body.isocore-lightstream #isocore-broadcast #iso-stream-subtitle{bottom:28px;padding:5px 6px;gap:4px;font-size:9px}
- body.isocore-lightstream #isocore-broadcast #iso-camera-label{bottom:4px!important;left:4px!important;padding:3px 4px;font-size:8px!important}
+html body #isocore-broadcast {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  overflow: hidden !important;
+  background: transparent !important;
+  border: 0 !important;
+  pointer-events: none !important;
+  z-index: 9999 !important;
 }
 
-
-/* Small readable camera title, even when Xsolla displays the stage scaled down. */
-body.isocore-lightstream #isocore-broadcast #iso-camera-label{
-  position:absolute!important;top:auto!important;bottom:4px!important;left:4px!important;
-  max-width:calc(100% - 8px)!important;padding:2px 4px!important;
-  font:800 clamp(6px,.55vw,10px)/1.2 Arial,sans-serif!important;
-  letter-spacing:0!important;white-space:nowrap!important;
-  overflow:hidden!important;text-overflow:ellipsis!important;
+/* 500 / 1920 = 26.041667%; 281 / 1080 = 26.018519%. */
+html body #isocore-broadcast #iso-camera {
+  box-sizing: border-box !important;
+  position: absolute !important;
+  top: 12% !important;
+  right: 2.8% !important;
+  bottom: auto !important;
+  left: auto !important;
+  width: 26.041667% !important;
+  height: 26.018519% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  max-width: none !important;
+  max-height: none !important;
+  aspect-ratio: auto !important;
+  transform: none !important;
+  overflow: hidden !important;
+  isolation: isolate !important;
+  background: #07111e !important;
+  border: 2px solid #00d4ff !important;
+  border-radius: 8px !important;
+  box-shadow: 0 5px 16px #0008, 0 0 14px #00d4ff22 !important;
+  z-index: 1 !important;
 }
-/* Preview diagnostic beneath the camera, not the PS5 gameplay area.
-   Camera = 34vw wide, 16:9 aspect => camera height = 19.125vw. */
-#iso-debug,#iso-debug-panel{
-  position:fixed!important;left:auto!important;right:2.5%!important;
-  top:calc(17% + 19.125vw + 8px)!important;bottom:auto!important;
-  width:34%!important;max-width:34%!important;box-sizing:border-box!important;
-  padding:4px 6px!important;font:700 clamp(7px,.6vw,11px)/1.3 Arial,sans-serif!important;
-  text-align:center!important;white-space:normal!important;overflow-wrap:anywhere!important;
-  border-width:1px!important;border-radius:4px!important;
-}
-/* Subtitles also fit inside the small on-air camera. */
-body.isocore-lightstream #isocore-broadcast #iso-stream-subtitle{
-  left:3%!important;right:3%!important;bottom:clamp(20px,2vw,38px)!important;
-  padding:3px 5px!important;gap:4px!important;border-left-width:2px!important;
-  font:600 clamp(7px,.52vw,11px)/1.25 Arial,sans-serif!important;
-}
-
-/* ISOCORE 1080P — COMPACT CORNER CAMERA / CLEAR LIGHTSTREAM BRANDING
-   Final canvas: 1920x1080. Camera: 500x281px (16:9) at 1920x1080, proportionally scaled in editor.
-   Keep this LAST in the CSS tab so it overrides older camera sizes. */
-html body.isocore-lightstream #isocore-broadcast #iso-camera {
-  left:auto!important;
-  right:2.8%!important;
-  top:12%!important;
-  width:26.041667%!important;
-  height:26.018519%!important;
-  max-width:none!important;
-  max-height:none!important;
-  aspect-ratio:auto!important;
-  transform:none!important;
-  border-width:2px!important;
-  border-radius:8px!important;
-}
-html body.isocore-lightstream #isocore-broadcast #iso-camera-label{
-  left:4px!important;
-  bottom:4px!important;
-  max-width:calc(100% - 8px)!important;
-  padding:2px 4px!important;
-  font:800 10px/1.15 Arial,sans-serif!important;
-  letter-spacing:0!important;
-  white-space:nowrap!important;
-  overflow:hidden!important;
-  text-overflow:ellipsis!important;
-}
-html body.isocore-lightstream #isocore-broadcast #iso-stream-subtitle {
-  bottom:23px!important;
-  left:3%!important;
-  right:3%!important;
-  font:600 10px/1.2 Arial,sans-serif!important;
-  padding:4px 5px!important;
-}
-/* Overlay footer is laid out inside the original 1920x1080 canvas.
-   Stack Isocore and Key Hunt at bottom LEFT, clear of Lightstream watermark. */
-html body.isocore-lightstream #isocore-broadcast #iso-overlay-shell .ov-foot {
-  left:36px!important;
-  right:36px!important;
-  bottom:16px!important;
-  height:52px!important;
-  display:block!important;
-  text-align:left!important;
-}
-html body.isocore-lightstream #isocore-broadcast #iso-overlay-shell .ov-foot>span {
-  position:absolute!important;
-  left:0!important;
-  right:auto!important;
-  text-align:left!important;
-  white-space:nowrap!important;
-  line-height:1.15!important;
-}
-html body.isocore-lightstream #isocore-broadcast #iso-overlay-shell .ov-foot>span:first-child {
-  bottom:27px!important;
-  font-size:13px!important;
-}
-html body.isocore-lightstream #isocore-broadcast #iso-overlay-shell .ov-foot>span:last-child {
-  bottom:0!important;
-  font-size:16px!important;
-  color:#d9eefa!important;
+html body #isocore-broadcast #iso-camera.echo {
+  border-color: #ff9a2e !important;
+  box-shadow: 0 5px 16px #0008, 0 0 14px #ff9a2e33 !important;
 }
 
-/* ISOCORE — clean on-air finish: no temporary diagnostic box. */
-html body #iso-debug,
-html body #iso-debug-panel {
-  display:none!important;
+/* Keep the WebGL rendering surface inside the camera frame. */
+html body #isocore-broadcast #iso-camera #igwHomeSlot,
+html body #isocore-broadcast #iso-camera .igw-wrap,
+html body #isocore-broadcast #iso-camera .igw-world,
+html body #isocore-broadcast #iso-camera .igw-canvas {
+  position: absolute !important;
+  inset: 0 !important;
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-width: none !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
-/* Camera name fits at the bottom, even in Xsolla's small mobile preview. */
+html body #isocore-broadcast #iso-camera .igw-canvas {
+  filter: brightness(1.18) saturate(1.08);
+}
+
+/* Small camera name that scales with the Xsolla preview. */
 html body #isocore-broadcast #iso-camera #iso-camera-label {
-  position:absolute!important;
-  top:auto!important;right:auto!important;bottom:4px!important;left:4px!important;
-  width:max-content!important;max-width:calc(100% - 8px)!important;
-  margin:0!important;padding:2px 4px!important;
-  font:800 clamp(5px,.55vw,10px)/1.1 Arial,sans-serif!important;
-  letter-spacing:-.01em!important;
-  white-space:nowrap!important;
-  overflow:hidden!important;
-  text-overflow:clip!important;
-  border-radius:3px!important;
+  position: absolute !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: 4px !important;
+  left: 4px !important;
+  width: max-content !important;
+  max-width: calc(100% - 8px) !important;
+  margin: 0 !important;
+  padding: 2px 4px !important;
+  font: 800 clamp(5px, .53vw, 11px)/1.15 Arial, sans-serif !important;
+  letter-spacing: 0 !important;
+  color: #e7f8ff !important;
+  background: #071526de !important;
+  border: 1px solid #00d4ff77 !important;
+  border-radius: 3px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: clip !important;
+  z-index: 6 !important;
+}
+
+/* Ghost/Echo dialogue stays within the camera, not over gameplay. */
+html body #isocore-broadcast #iso-stream-subtitle {
+  position: absolute !important;
+  top: auto !important;
+  bottom: 25px !important;
+  left: 3% !important;
+  right: 3% !important;
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 4px !important;
+  padding: 4px 6px !important;
+  font: 600 clamp(6px, .65vw, 12px)/1.25 Arial, sans-serif !important;
+  color: #f5faff !important;
+  background: #020912e6 !important;
+  border-left: 2px solid #00d4ff !important;
+  border-radius: 4px !important;
+  text-shadow: 0 1px 3px #000 !important;
+  z-index: 7 !important;
+}
+html body #isocore-broadcast #iso-stream-subtitle[data-who="echo"] {
+  border-left-color: #ff9a2e !important;
+}
+html body #isocore-broadcast #iso-stream-subtitle .who {
+  color: #00d4ff !important;
+  font-weight: 900 !important;
+  white-space: nowrap !important;
+}
+html body #isocore-broadcast #iso-stream-subtitle[data-who="echo"] .who {
+  color: #ffb566 !important;
+}
+html body #isocore-broadcast #iso-stream-subtitle .line {
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+html body #isocore-broadcast #iso-stream-subtitle[hidden] {
+  display: none !important;
+}
+
+/* Preserve the original team scoreboard; transparent gameplay background. */
+html body #isocore-broadcast #iso-overlay-shell {
+  background: transparent !important;
+}
+
+/* Put isocoregaming.co.uk at bottom LEFT, clear of Lightstream watermark.
+   The bridge scales this footer from its original 1920x1080 canvas. */
+html body #isocore-broadcast #ovKeys {
+  display: none !important;
+}
+html body #isocore-broadcast #iso-overlay-shell .ov-foot {
+  position: absolute !important;
+  left: 36px !important;
+  right: auto !important;
+  bottom: 24px !important;
+  height: auto !important;
+  display: flex !important;
+  justify-content: flex-start !important;
+  align-items: center !important;
+  text-align: left !important;
+  white-space: nowrap !important;
+}
+html body #isocore-broadcast #iso-overlay-shell .ov-foot > span:last-child {
+  position: static !important;
+  display: inline-block !important;
+  margin: 0 !important;
+  font: 800 18px/1.1 Arial, sans-serif !important;
+  letter-spacing: .04em !important;
+  color: #d9eefa !important;
+  text-shadow: 0 2px 5px #000 !important;
+}
+
+/* No temporary CAMERA READY box on the live stream. */
+html body #iso-debug,
+html body #iso-debug-panel,
+html body #isocore-broadcast #iso-diag:not(.error),
+html body #isocore-broadcast .isocore-setup-diag {
+  display: none !important;
+}
+
+/* Remove arena introduction and unused in-camera controls. */
+html body #isocore-broadcast .igw-guide,
+html body #isocore-broadcast .igw-precover,
+html body #isocore-broadcast .igw-portal,
+html body #isocore-broadcast .igw-materialise,
+html body #isocore-broadcast .igw-mf,
+html body #isocore-broadcast .igw-cams,
+html body #isocore-broadcast .igw-hud,
+html body #isocore-broadcast .igw-controls,
+html body #isocore-broadcast .igw-menu,
+html body #isocore-broadcast .igw-ui,
+html body #isocore-broadcast .igw-stick,
+html body #isocore-broadcast [aria-label="Loading the arena"] {
+  display: none !important;
 }
