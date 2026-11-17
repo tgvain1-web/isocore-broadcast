@@ -26,6 +26,21 @@ jobs:
           node --check src/worker.mjs
           node --check public/assets/bridge.js
           node --check public/assets/ig-ghost-world-xsolla.js
+      - name: Verify compact model files actually exist
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          priorities=('arena','stage-main','station','simrig','ghost','echo')
+          sizes=[]
+          for name in priorities:
+              full=Path('public/assets/models/'+name+'.glb')
+              small=Path('public/assets/models/'+name+'-low.glb')
+              assert full.exists() and small.exists(), name+' missing variant'
+              assert small.stat().st_size < full.stat().st_size, name+' compact file not smaller'
+              sizes.append((name,full.stat().st_size,small.stat().st_size))
+          print('COMPACT RIG MODEL SAVINGS',sizes)
+          print('TOTAL',sum(t[1] for t in sizes),'->',sum(t[2] for t in sizes))
+          PY
       - name: Probe deployed Worker endpoints
         shell: bash
         run: |
@@ -85,20 +100,25 @@ jobs:
                   print('Engine HTTP',e.code)
                   bridge='';engine=''
               if ('id="iso-preview-toggle"' in preview and
-                  'bridge.js?v=10' in preview and
+                  'bridge.js?v=11' in preview and
                   'V0.6.4' in styles and
                   "ROOT.classList.add('isocore-camera-booting')" in bridge and
                   'Isocore Broadcast Studio Key' in engine and
                   'renderer.toneMappingExposure = 1.32' in engine and
                   'coverN = names.length;' in engine and
+                  'if (studioGhostSeat) currentPos.set' in engine and
+                  'if (studioEchoSeat) echoPos.set' in engine and
+                  'else keepOut(a.pos)' in engine and
+                  'broadcastModelLoadStarted' in engine and
+                  'var availableFast = ' in engine and
                   (current.get('shot')=='first' or (current.get('shot') in ('side','shoulder','wide','high') and int(current.get('updated_at') or 0)>0))):
-                  print('RESULT: V0.6.4 BRIGHTER RIGS / INTRO-FREE CAMERA DEPLOYED')
+                  print('RESULT: V0.6.5 FAST COMPACT MODELS / BOTH CHARACTERS AT SEATS DEPLOYED')
                   print('ON-AIR STATE:',json.dumps(current))
                   break
               print('Updated preview not deployed yet, attempt',attempt+1)
               time.sleep(8)
           else:
-              print('RESULT: V0.6.4 BRIGHTER RIGS / INTRO-FREE CAMERA NOT YET DEPLOYED')
+              print('RESULT: V0.6.5 FAST COMPACT MODELS / SEATED CHARACTERS NOT YET DEPLOYED')
               sys.exit(1)
           # This test checks HTTP availability. The actual arena close button still needs
           # a browser interaction test, which HTTP-only checks cannot simulate.
