@@ -3484,7 +3484,10 @@
         // looking BACK towards the occupied chair. An offset to the side and
         // a raised lens keep screen backs in the foreground without hiding
         // the streamer's upper body or face.
-        var front = 3.65, lateral = 1.65;
+        // Keep Ghost's original framing; bring Echo's camera closer to the seated driver.
+        // FOV, lens height, and aim stay unchanged to preserve the cockpit perspective.
+        var front = inSuite === 'echo' ? 3.1 : 3.65;
+        var lateral = inSuite === 'echo' ? 1.45 : 1.65;
         return [
           [e[0] + dx * front + px * lateral,
            e[1] + .78,
