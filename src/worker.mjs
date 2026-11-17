@@ -28,7 +28,7 @@ export function parseVote(message){const match=/^!(ghost|echo)(?:\s|$)/i.exec(St
 export function validCamera(v){return v && WHO.has(v.who) && SHOTS.has(v.shot);}
 function authorized(request,secret){const given=request.headers.get('authorization')||''; return !!secret && given.startsWith('Bearer ') && given.slice(7)===secret;}
 async function bodyJSON(request,max=2048){const text=await request.text();if(text.length>max)throw Error('Payload too large');return JSON.parse(text);}
-async function dbReady(env){return !!env.DB && !!await env.DB.prepare('SELECT id FROM camera WHERE id=1').first();}
+async function dbReady(env){if(!env.DB)return false;try{const [camera,social]=await Promise.all([env.DB.prepare('SELECT id FROM camera WHERE id=1').first(),env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='ai_followers'").first()]);return !!camera&&!!social;}catch{return false;}}
 async function getCamera(db){
   const c=(await db.prepare('SELECT who, shot, updated_at FROM camera WHERE id=1').first()) || {who:'ghost',shot:'first',updated_at:0};
   // The initial V0.6 deployment stored 'side' with updated_at=0.
@@ -43,7 +43,7 @@ async function getTug(db){return (await db.prepare('SELECT * FROM tug WHERE id=1
 async function getSocial(db){
   const [rows,lines]=await Promise.all([
     db.prepare('SELECT side, COUNT(*) AS total FROM ai_followers GROUP BY side').all(),
-    db.prepare('SELECT id,who,text,kind,at FROM ai_dialogue ORDER BY id DESC LIMIT 8').all()
+    db.prepare('SELECT id,who,text,kind,at FROM ai_dialogue WHERE kind<>'bot' ORDER BY id DESC LIMIT 8').all()
   ]);
   return {followers:publicCounts(rows.results),dialogue:(lines.results||[]).reverse()};
 }
@@ -156,11 +156,11 @@ async function twitchHook(request,env){
     }
     text='@'+nick+' '+(result.changed?'now follows':'already follows')+' '+side.toUpperCase()+' in Isocore. Ghost '+counts.ghost+' | Echo '+counts.echo+'.';
   }else{
-    const recent=await env.DB.prepare('SELECT at FROM ai_dialogue WHERE kind=? ORDER BY at DESC LIMIT 1').bind('chat').first();
+    const recent=await env.DB.prepare('SELECT who,at FROM ai_dialogue WHERE kind=? ORDER BY at DESC LIMIT 1').bind('chat').first();
     const same=await env.DB.prepare('SELECT at FROM ai_dialogue WHERE kind=? AND chatter_id=? ORDER BY at DESC LIMIT 1').bind('chat',chatter).first();
     if((!recent||time()-Number(recent.at)>=25)&&(!same||time()-Number(same.at)>=75)){
       const [social,telemetry]=await Promise.all([getSocial(env.DB),getTelemetry(env.DB)]);
-      const reply=chatReply(message,nick,social.followers,telemetry,messageId.length);
+      const reply=chatReply(message,nick,social.followers,telemetry,recent?.who==='ghost'?1:0);
       if(reply){
         await utter(env.DB,reply.who,reply.text,'chat',id+':chat',chatter);
         text=reply.who.toUpperCase()+': '+reply.text;
@@ -182,7 +182,7 @@ async function twitchHook(request,env){
 async function api(request,env,path){
   if(request.method==='OPTIONS')return new Response(null,{status:204,headers:publicHeaders});
   if(!env.DB)return fail('D1 binding is missing',503);
-  if(!await dbReady(env))return fail('D1 migrations have not been applied',503);
+  if(!await dbReady(env))return fail('D1 migrations 0001 and 0002 must both be applied',503);
   const db=env.DB;
   if(request.method==='GET'){
     if(path==='/api/health')return answer({ok:true,service:'isocore-broadcast',database:'ready'});
