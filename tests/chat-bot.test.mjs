@@ -162,7 +162,10 @@ test('EventSub stays pending until signed webhook proves delivery to the same ch
     async first(){return sql.includes('FROM chat_bot_state')?bot:null},
     async run(){
      if(sql.includes('SET subscribed=CASE'))bot.subscribed=bot.subscribed===1?1:2;
-     if(sql.includes('SET subscribed=1')&&args[0]===bot.broadcaster_id)bot.subscribed=1;
+     if(sql.includes('SET subscribed=1')){
+       if(args[0]!==bot.broadcaster_id)return {meta:{changes:0}};
+       bot.subscribed=1;
+     }
      return {meta:{changes:1}};
     }
    };
@@ -187,7 +190,7 @@ test('EventSub stays pending until signed webhook proves delivery to the same ch
   assert.equal(state.subscription_pending,true);
   assert.equal(state.ready,false);
   assert.equal(await confirmChatSubscription(db,{type:'channel.chat.message',
-    condition:{broadcaster_user_id:'222',user_id:'222'}}),true);
+    condition:{broadcaster_user_id:'222',user_id:'222'}}),false);
   assert.equal(bot.subscribed,2,'An unrelated broadcaster challenge cannot enable replies');
   assert.equal(await confirmChatSubscription(db,{type:'channel.chat.message',
     condition:{broadcaster_user_id:'111',user_id:'111'}}),true);
