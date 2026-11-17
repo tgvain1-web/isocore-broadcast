@@ -3,6 +3,7 @@
   "name": "isocore-broadcast",
   "main": "src/worker.mjs",
   "compatibility_date": "2026-11-16",
-  "assets": { "directory": "./public", "binding": "ASSETS", "run_worker_first": ["/api/*", "/webhooks/*"] },
+  "assets": { "directory": "./public", "binding": "ASSETS", "run_worker_first": ["/api/*", "/webhooks/*", "/oauth/*"] },
+  "ai": { "binding": "AI" },
   "d1_databases": [{ "binding": "DB", "database_name": "isocore-broadcast-db", "database_id": "c1672fd3-3037-462d-9960-b959db9a0070", "migrations_dir": "migrations" }]
 }
