@@ -92,3 +92,65 @@ body.isocore-lightstream #isocore-broadcast #iso-stream-subtitle{
   padding:3px 5px!important;gap:4px!important;border-left-width:2px!important;
   font:600 clamp(7px,.52vw,11px)/1.25 Arial,sans-serif!important;
 }
+
+/* ISOCORE 1080P — COMPACT CORNER CAMERA / CLEAR LIGHTSTREAM BRANDING
+   Final canvas: 1920x1080. Camera: 18% = 346x194px at 1080p.
+   Keep this LAST in the CSS tab so it overrides older camera sizes. */
+html body.isocore-lightstream #isocore-broadcast #iso-camera {
+  left:auto!important;
+  right:2.8%!important;
+  top:12%!important;
+  width:18%!important;
+  height:auto!important;
+  max-width:none!important;
+  max-height:none!important;
+  aspect-ratio:16/9!important;
+  transform:none!important;
+  border-width:2px!important;
+  border-radius:8px!important;
+}
+html body.isocore-lightstream #isocore-broadcast #iso-camera-label{
+  left:4px!important;
+  bottom:4px!important;
+  max-width:calc(100% - 8px)!important;
+  padding:2px 4px!important;
+  font:800 10px/1.15 Arial,sans-serif!important;
+  letter-spacing:0!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
+html body.isocore-lightstream #isocore-broadcast #iso-stream-subtitle {
+  bottom:23px!important;
+  left:3%!important;
+  right:3%!important;
+  font:600 10px/1.2 Arial,sans-serif!important;
+  padding:4px 5px!important;
+}
+/* Overlay footer is laid out inside the original 1920x1080 canvas.
+   Stack Isocore and Key Hunt at bottom LEFT, clear of Lightstream watermark. */
+html body.isocore-lightstream #isocore-broadcast #iso-overlay-shell .ov-foot {
+  left:36px!important;
+  right:36px!important;
+  bottom:16px!important;
+  height:52px!important;
+  display:block!important;
+  text-align:left!important;
+}
+html body.isocore-lightstream #isocore-broadcast #iso-overlay-shell .ov-foot>span {
+  position:absolute!important;
+  left:0!important;
+  right:auto!important;
+  text-align:left!important;
+  white-space:nowrap!important;
+  line-height:1.15!important;
+}
+html body.isocore-lightstream #isocore-broadcast #iso-overlay-shell .ov-foot>span:first-child {
+  bottom:27px!important;
+  font-size:13px!important;
+}
+html body.isocore-lightstream #isocore-broadcast #iso-overlay-shell .ov-foot>span:last-child {
+  bottom:0!important;
+  font-size:16px!important;
+  color:#d9eefa!important;
+}
