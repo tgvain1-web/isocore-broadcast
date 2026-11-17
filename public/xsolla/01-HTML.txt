@@ -1,2 +1,2 @@
-<!-- ISOCORE BROADCAST — Xsolla HTML tab -->
+<!-- ISOCORE BROADCAST / XSOLLA HTML -->
 <div id="isocore-broadcast" aria-label="Isocore live PS5 broadcast overlay"></div>
