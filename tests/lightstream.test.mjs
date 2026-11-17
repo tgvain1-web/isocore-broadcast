@@ -43,7 +43,7 @@ test('Xsolla Free path receives the same on-air layout and camera captions',()=>
   assert.doesNotThrow(()=>new Function(xsolla));
   assert.ok(!xsolla.includes('REPLACE_WITH_YOUR_DEPLOYED_ISOCORE_BROADCAST_HOST'));
   assert.ok(!xsolla.includes('iso-debug-panel'));
-  assert.ok(xsolla.includes("var VERSION = '18'"));
+  assert.ok(xsolla.includes("var VERSION = '19'"));
   assert.doesNotMatch(xsolla,/(CONTROL_TOKEN|TWITCH_BOT_ACCESS_TOKEN|TELEMETRY_TOKEN)/);
 });
 
