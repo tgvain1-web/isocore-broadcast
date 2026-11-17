@@ -27,10 +27,10 @@
   scaleOverlay();
   function status(message,error){diag.textContent=message;diag.classList.toggle('error',!!error);diag.hidden=false;}
   function script(path){return new Promise((resolve,reject)=>{
-    const s=document.createElement('script');s.src=HOST+path+'?v=18';s.crossOrigin='anonymous';
+    const s=document.createElement('script');s.src=HOST+path+'?v=19';s.crossOrigin='anonymous';
     s.onload=resolve;s.onerror=()=>reject(Error('External script blocked: '+path));document.head.appendChild(s);
   });}
-  function css(path){const l=document.createElement('link');l.rel='stylesheet';l.href=HOST+path+'?v=18';document.head.appendChild(l);}
+  function css(path){const l=document.createElement('link');l.rel='stylesheet';l.href=HOST+path+'?v=19';document.head.appendChild(l);}
   async function getState(){
     try{
       const resp=await fetch(HOST+'api/state',{cache:'no-store',credentials:'omit'});
