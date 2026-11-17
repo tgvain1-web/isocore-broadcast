@@ -1,45 +1,74 @@
-/* ISOCORE BROADCAST — Xsolla Code / JavaScript tab.
- * Paste ONLY this JS, without <script> tags.
- * The 3D engine & art are fetched from the independent Cloudflare Worker.
- * Never include control tokens, OAuth credentials, or stream keys.
- */
+/* ISOCORE BROADCAST — XSOLLA JAVASCRIPT (diagnostic edition)
+   Use with the existing HTML + CSS tabs. No <script> tags.
+   Set DEBUG=false only AFTER the overlay is visibly working.
+*/
 (function(){
   'use strict';
-  var HOST='https://REPLACE_WITH_YOUR_DEPLOYED_ISOCORE_BROADCAST_HOST';
-  var VERSION='14';
+  var HOST='https://isocore-broadcast.tgvain1.workers.dev';
+  var DEBUG=true, VERSION='15';
+
   function boot(){
     var root=document.getElementById('isocore-broadcast');
-    if(!root || root.dataset.xsollaBooted==='1')return;
+    if(!root){ report('HTML tab missing: no #isocore-broadcast',true); return; }
+    if(root.dataset.xsollaBooted==='1')return;
     root.dataset.xsollaBooted='1';
     document.body.classList.add('isocore-lightstream');
-    var q=new URLSearchParams(location.search);
-    if(q.get('debug')==='1')document.body.classList.add('isocore-lightstream-debug');
-    if(q.get('layout')==='large')document.body.classList.add('isocore-lightstream-large');
-    var diag=document.getElementById('iso-diag');
-    function error(msg){
-      if(diag){diag.textContent='ISOCORE // '+msg;diag.classList.add('error');}
-      // Do not show a startup error over PS5 gameplay; keep errors in developer console.
-      try{console.error('[Isocore Broadcast] '+msg);}catch(e){}
-    }
-    try{
-      var u=new URL(HOST);
-      if(u.protocol!=='https:'||!u.host||u.hostname.indexOf('replace_with_')>=0)throw Error('Set your real Cloudflare Worker HTTPS URL');
-    }catch(e){error(e.message);return;}
+    // Always show an error when the overlay is empty. Do not hide it behind CSS.
+    report('HTML + JavaScript running');
+
     function load(name){
       return new Promise(function(resolve,reject){
         var script=document.createElement('script');
         script.src=HOST+'/assets/'+name+'?v='+VERSION;
         script.crossOrigin='anonymous';
-        script.onload=resolve;
-        script.onerror=function(){reject(Error('Script unavailable or Xsolla CSP blocks '+name))};
+        script.onload=function(){report('Loaded '+name);resolve()};
+        script.onerror=function(){reject(Error('FAILED to load '+name+' (not deployed or blocked)'))};
         document.head.appendChild(script);
       });
     }
+
     load('stage.js')
       .then(function(){return load('overlay-stage.js')})
-      .then(function(){return load('lightstream-dialogue.js').catch(function(){return null;})})
+      .then(function(){return load('lightstream-dialogue.js').catch(function(){
+        report('Captions not deployed; proceeding with camera');return null;
+      })})
       .then(function(){return load('bridge.js')})
-      .catch(function(e){error(e.message)});
+      .then(function(){
+        report('Bridge loaded; checking broadcast API');
+        fetch(HOST+'/api/health',{cache:'no-store',mode:'cors'})
+          .then(function(r){return r.text().then(function(body){
+            if(!r.ok){report('API HEALTH '+r.status+': '+body.slice(0,100),true);return;}
+            report('API healthy; loading 3D rig models');
+          })})
+          .catch(function(e){report('API fetch blocked / offline: '+e.message,true)});
+        setTimeout(function(){
+          var stage=document.getElementById('ig-ghost-world');
+          var canvas=root.querySelector('.igw-canvas');
+          var ready=!root.classList.contains('isocore-camera-booting');
+          if(ready)report('Camera ready — preview and disable debug mode');
+          else if(!stage)report('3D stage missing; check scripts / Xsolla restrictions',true);
+          else if(!canvas)report('3D canvas missing; check Xsolla WebGL support',true);
+          else report('3D canvas exists; model loading or WebGL may be blocked');
+        },18000);
+      })
+      .catch(function(e){report(e.message,true)});
+  }
+
+  function report(message,error){
+    try { console[error?'error':'log']('[ISOCORE] '+message); }catch(e){}
+    if(!DEBUG&&!error)return;
+    var el=document.getElementById('iso-debug-panel');
+    if(!el){
+      el=document.createElement('div');
+      el.id='iso-debug-panel';
+      // Out of the main root: bridge.js replaces the contents of that root.
+      el.style.cssText='position:fixed!important;left:12px!important;bottom:12px!important;z-index:2147483647!important;max-width:75vw!important;padding:10px 14px!important;background:#071421f2!important;color:#dcf7ff!important;border:2px solid #00d4ff!important;border-radius:6px!important;font:700 15px/1.4 Arial,sans-serif!important;letter-spacing:0!important;pointer-events:none!important;white-space:pre-wrap!important;text-shadow:none!important;';
+      document.body.appendChild(el);
+    }
+    el.textContent='ISOCORE // '+message;
+    if(error){el.style.borderColor='#ff7777';el.style.color='#ffe0e0';}
+    else {el.style.borderColor='#00d4ff';el.style.color='#dcf7ff';}
+    if(!DEBUG&&!error)el.hidden=true;
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});
   else boot();
