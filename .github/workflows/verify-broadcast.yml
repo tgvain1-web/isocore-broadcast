@@ -103,8 +103,10 @@ jobs:
                   'bridge.js?v=19' in preview and
                   'V0.6.4' in styles and
                   "ROOT.classList.add('isocore-camera-booting')" in bridge and
-                  'Isocore Broadcast Studio Key' in engine and
-                  'renderer.toneMappingExposure = 1.32' in engine and
+                  'Isocore Broadcast Studio Key' not in engine and
+                  'Isocore Broadcast Rig Fill' not in engine and
+                  'addIsocoreWhiteSpots' not in engine and
+                  'renderer.toneMappingExposure = 1.2' in engine and
                   'coverN = names.length;' in engine and
                   'if (studioGhostSeat) currentPos.set' in engine and
                   'if (studioEchoSeat) echoPos.set' in engine and
@@ -112,13 +114,13 @@ jobs:
                   'broadcastModelLoadStarted' in engine and
                   'var availableFast = ' in engine and
                   (current.get('shot')=='first' or (current.get('shot') in ('side','shoulder','wide','high') and int(current.get('updated_at') or 0)>0))):
-                  print('RESULT: V0.6.5 FAST COMPACT MODELS / BOTH CHARACTERS AT SEATS DEPLOYED')
+                  print('RESULT: V0.6.5 ORIGINAL LIGHTING / BOTH CHARACTERS AT SEATS DEPLOYED')
                   print('ON-AIR STATE:',json.dumps(current))
                   break
               print('Updated preview not deployed yet, attempt',attempt+1)
               time.sleep(8)
           else:
-              print('RESULT: V0.6.5 FAST COMPACT MODELS / SEATED CHARACTERS NOT YET DEPLOYED')
+              print('RESULT: V0.6.5 ORIGINAL LIGHTING / SEATED CHARACTERS NOT YET DEPLOYED')
               sys.exit(1)
           # This test checks HTTP availability. The actual arena close button still needs
           # a browser interaction test, which HTTP-only checks cannot simulate.

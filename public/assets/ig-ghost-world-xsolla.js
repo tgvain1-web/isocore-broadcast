@@ -103,7 +103,7 @@
     renderer.setClearColor(0x050a16, 1);
     renderer.outputColorSpace = T.SRGBColorSpace;
     renderer.toneMapping = T.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.32; // Broadcast camera exposure: readable rigs without washing out their cyan/orange lighting.
+    renderer.toneMappingExposure = 1.2;
     var scene = new T.Scene();
     scene.background = new T.Color(0x050a16);
     scene.fog = new T.Fog(0x0a1630, 45, 230);
@@ -3307,35 +3307,6 @@
       still(); wake();
     }
     function leaveBooth() { inBooth = false; myDesk = -1; figsShow(); glassShow(true); stage.classList.remove('igw-in-booth'); seated(false); seatY = 0; seatHome = null; player.x = START.x; player.z = START.z; pyaw = START.yaw; ppitch = START.pitch; still(); wake(); }
-    // BROADCAST V0.6.4 — studio key + fill lights local to Ghost and Echo's rigs.
-    // Previously the white spots were ~20m above the rigs at intensity 2.4:
-    // with inverse-square falloff they added almost no usable light.
-    // Place these shadow-free, neutral-white lights close to the rigs instead,
-    // leaving the original cyan/orange show lighting and arena ambience intact.
-    var isocoreWhiteSpotsReady = false;
-    function addIsocoreWhiteSpots() {
-      if (isocoreWhiteSpotsReady) return;
-      isocoreWhiteSpotsReady = true;
-      [
-        [-17.3, 8.3, 5.0, -17.2, 1.85, 0, 95],
-        [ 17.3, 8.3, 5.0,  17.2, 1.85, 0, 95],
-        [  0.0, 12.0, 5.0,  0.0, 1.85, 0, 24]
-      ].forEach(function (p, i) {
-        var light = new T.SpotLight(0xf5faff, p[6], 24, i === 2 ? 0.66 : 0.74, 0.75, 2);
-        light.name = 'Isocore Broadcast Studio Key ' + (i + 1);
-        light.position.set(p[0], p[1], p[2]);
-        light.target.position.set(p[3], p[4], p[5]);
-        light.castShadow = false;
-        scene.add(light); scene.add(light.target);
-      });
-      [-17.1, 17.1].forEach(function (x, i) {
-        var fill = new T.PointLight(0xf1f8ff, 30, 12, 2);
-        fill.name = 'Isocore Broadcast Rig Fill ' + (i ? 'Echo' : 'Ghost');
-        fill.position.set(x, 3.8, -1.5);
-        fill.castShadow = false;
-        scene.add(fill);
-      });
-    }
     function placeSuites() {
       try { plotRoots.forEach(function (g) { g.visible = false; }); } catch (e) {}
       try { fitCharacters(); } catch (e) { modelInfo.chars = { state: 'error', err: String(e).slice(0, 200) }; }
@@ -3353,7 +3324,6 @@
       // own lights, and every light is work for every pixel on a phone
       try { concourseLights.forEach(function (l) { l.visible = false; l.intensity = 0; }); lampFill.visible = false; indoor(); } catch (e) {}
       if (!stageRoots.main) return;
-      addIsocoreWhiteSpots();
       [['ghost', 'station', -19, Math.PI / 2, .55, 1.2, 'iso'], ['echo', 'simrig', 19, -Math.PI / 2, .75, 1.05, 'gs']].forEach(function (c) {
         var src = kinds[c[1]]; if (!src) return;
         var root = src.clone(true), y = suiteTop(c[2], 0); root.position.set(c[2], y, 0); root.rotation.set(0, c[3], 0); root.updateMatrixWorld(true);
