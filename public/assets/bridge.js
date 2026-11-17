@@ -27,15 +27,16 @@
   scaleOverlay();
   function status(message,error){diag.textContent=message;diag.classList.toggle('error',!!error);diag.hidden=false;}
   function script(path){return new Promise((resolve,reject)=>{
-    const s=document.createElement('script');s.src=HOST+path+'?v=11';s.crossOrigin='anonymous';
+    const s=document.createElement('script');s.src=HOST+path+'?v=12';s.crossOrigin='anonymous';
     s.onload=resolve;s.onerror=()=>reject(Error('External script blocked: '+path));document.head.appendChild(s);
   });}
-  function css(path){const l=document.createElement('link');l.rel='stylesheet';l.href=HOST+path+'?v=11';document.head.appendChild(l);}
+  function css(path){const l=document.createElement('link');l.rel='stylesheet';l.href=HOST+path+'?v=12';document.head.appendChild(l);}
   async function getState(){
     try{
       const resp=await fetch(HOST+'api/state',{cache:'no-store',credentials:'omit'});
       if(!resp.ok)throw Error('API '+resp.status);
       const value=await resp.json();apiOK=true;
+      window.dispatchEvent(new CustomEvent('isocore:broadcast-state',{detail:value}));
       const c=value.camera||{};who=c.who==='echo'?'echo':'ghost';shot=['first','shoulder','side','wide','high'].includes(c.shot)?c.shot:'first';
       $('iso-camera').className=who;
       $('iso-camera-label').textContent=who.toUpperCase()+' // '+(shot==='high'?'JUMBOTRON':shot.toUpperCase())+' CAMERA';
@@ -54,12 +55,13 @@
       if(!window.ISOCORE_BROADCAST_STAGE)await script('assets/stage.js');
       if(!window.ISOCORE_OVERLAY_HTML)await script('assets/overlay-stage.js');
       // The CSS on the original streaming page and the in-world Three.js CSS are retained.
-      css('assets/ig-ghost-world.css');css('assets/broadcast.css');
+      css('assets/ig-ghost-world.css');css('assets/broadcast.css');css('assets/social-overlay.css');
       $('igwHomeSlot').innerHTML=window.ISOCORE_BROADCAST_STAGE;
       $('iso-overlay-shell').innerHTML=window.ISOCORE_OVERLAY_HTML;scaleOverlay();
       if(!$('ig-ghost-world'))throw Error('Original arena stage was not created');
       await script('assets/ig-ghost-world-xsolla.js');booted=true;
       await script('assets/overlay-original.js');
+      await script('assets/social-overlay.js');
       status('ISOCORE // 3D ENGINE LOADED · WAITING FOR MODELS',false);
       await getState();setInterval(getState,5000);
       setTimeout(()=>{if(!ready)status('ISOCORE // CAMERA NOT READY · WEBGL/MODELS/CSP. Check console.',true)},45000);
