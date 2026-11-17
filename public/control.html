@@ -18,6 +18,7 @@
 <button id="chatConnect" type="button">Connect Twitch account securely</button>
 <div class="row"><button id="chatSubscribe" type="button">Retry chat subscription</button><button id="chatRefresh" type="button">Check connection</button></div>
 <div class="row"><button id="chatEnable" type="button">Enable chat replies</button><button id="chatDisable" type="button">Disable chat replies</button></div>
+<p>If Twitch is connected but EventSub says "Not subscribed", tap <strong>Connect Twitch account securely</strong> again and approve the new bot permissions. Then tap <strong>Retry chat subscription</strong>. Do not enable replies until EventSub is verified.</p>
 <p>The Connect button opens Twitch OAuth. Credentials stay server-side. If chat is unavailable, normal game commentary continues.</p>
 </fieldset>
 <fieldset><legend>Live overlay controls</legend><label for="alert">CORE alert</label><input id="alert" maxlength="160" placeholder="Broadcast announcement"><button id="announce">Send alert</button><div class="row"><button id="ghostVote">Test Ghost vote</button><button id="echoVote">Test Echo vote</button></div><button id="reset">Reset voting meter</button><p>Test votes are owner-only. Live Twitch votes require a verified Twitch EventSub subscription.</p></fieldset>
@@ -35,7 +36,7 @@ async function loadChat(){
     const cfg=v.config||{};
     const missing=Object.keys(cfg).filter(k=>!cfg[k]).join(', ');
     $('chatStatus').textContent='Twitch: '+(v.connected?'Connected as '+v.channel:'Not connected')+
-      '\nEventSub: '+(v.subscribed?'Subscribed':'Not subscribed')+
+      '\nEventSub: '+(v.subscribed?'Verified and active':(v.subscription_pending?'Awaiting signed Twitch verification':'Not subscribed'))+
       '\nReplies: '+(v.enabled?'ENABLED':'OFF')+
       '\nServices missing: '+(missing||'none');
   }catch(e){$('chatStatus').textContent='Chat status: '+e.message}

@@ -2,7 +2,7 @@
  * Public reads are cross-origin. All privileged writes require a bearer secret or a
  * Twitch-signed EventSub message. No stream keys, Discord credentials or OAuth secrets in source.
  */
-import {chatStatus,startChatOAuth,finishChatOAuth,chatOwnerAction,chatLatest,maybeAnswerChat,revokeChatSubscription} from './chat-bot.mjs';
+import {chatStatus,startChatOAuth,finishChatOAuth,chatOwnerAction,chatLatest,maybeAnswerChat,revokeChatSubscription,confirmChatSubscription} from './chat-bot.mjs';
 const SHOTS = new Set(['first', 'shoulder', 'side', 'wide', 'high']);
 const WHO = new Set(['ghost','echo']);
 const publicHeaders = {
@@ -77,7 +77,11 @@ async function twitchHook(request,env,ctx){
   if(!await verifyTwitch(request,raw,env.TWITCH_EVENTSUB_SECRET))return fail('Invalid Twitch signature',401);
   let data;try{data=JSON.parse(raw);}catch{return fail('Invalid JSON');}
   const typ=request.headers.get('twitch-eventsub-message-type')||'';
-  if(typ==='webhook_callback_verification')return new Response(String(data.challenge||''),{headers:{'content-type':'text/plain;charset=utf-8',...publicHeaders}});
+  if(typ==='webhook_callback_verification'){
+    // Activate chat ONLY after Twitch proves control of our signed callback.
+    if(env.DB)await confirmChatSubscription(env.DB,data.subscription);
+    return new Response(String(data.challenge||''),{headers:{'content-type':'text/plain;charset=utf-8',...publicHeaders}});
+  }
   if(typ==='revocation'){
     if(data.subscription?.type==='channel.chat.message'&&env.DB)
       await revokeChatSubscription(env.DB);

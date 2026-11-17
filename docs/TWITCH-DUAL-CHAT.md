@@ -37,11 +37,14 @@ accounts. You can choose to use a dedicated bot account in a later version.
 5. Deploy the updated Worker and static assets.
 6. Open `/control.html`, provide `CONTROL_TOKEN`, press
    **Connect Twitch account securely**, then authorise Twitch permissions
-   `user:read:chat` and `user:write:chat`. The authorisation code is
+   `user:read:chat`, `user:write:chat`, `user:bot`, and `channel:bot`.
+   These can all be approved by the same broadcaster account (no second bot account).
+   If you previously connected before the four-scope update, press Connect again
+   to re-authorise the extra Twitch permissions. The authorisation code is
    exchanged on the Worker and tokens are encrypted before D1 storage.
 7. Re-enter your control token after returning to the control page.
-   Check that Twitch is connected and EventSub subscription is active.
-   Use **Retry chat subscription** if necessary.
+   Check that Twitch is connected and EventSub status is **Verified and active**. Twitch may briefly show **Awaiting signed Twitch verification** while confirming the webhook.
+   Use **Retry chat subscription** if necessary. Twitch HTTP 401/403 usually means you must reauthorise the new scopes first.
 8. Only when you want Ghost and Echo to start answering, press
    **Enable chat replies**. Use **Disable chat replies** at any time.
 9. Replace the Xsolla JavaScript tab with version `19` from
@@ -64,7 +67,7 @@ code, GitHub, public URLs, a chat message, or a screenshot.
 - No Connect link: check the four secrets in the Worker.
 - OAuth error: the Twitch developer app's redirect URL must match exactly;
   sign in as the channel selected by `TWITCH_CHANNEL_LOGIN`.
-- EventSub not subscribed: check EventSub secret and client permissions.
+- EventSub not subscribed after connecting: re-authorise with `user:bot` and `channel:bot`, retry, and wait for Twitch's signed webhook verification; only the verified state enables replies.
 - AI binding not present: chat replies cannot be enabled.
 - No on-camera reply: verify the message was actually sent in Twitch chat.
 - `!ghost` and `!echo` alone remain reserved for votes and never trigger AI.
