@@ -6,6 +6,9 @@
   function err(s){d.textContent='ISOCORE // '+s;d.style.color='#ffc1c1';}
   try{var u=new URL(HOST);if(u.protocol!=='https:'||u.hostname.startsWith('replace_'))throw Error('Set your Cloudflare Worker URL in HOST first');}
   catch(e){err(e.message);return;}
-  function load(path){return new Promise(function(ok,bad){var s=document.createElement('script');s.src=HOST+'/assets/'+path+'?v=6';s.crossOrigin='anonymous';s.onload=ok;s.onerror=function(){bad(Error('SCRIPT BLOCKED: '+path))};document.head.appendChild(s);});}
-  load('stage.js').then(function(){return load('overlay-stage.js')}).then(function(){return load('bridge.js')}).catch(function(e){err(e.message+' · Xsolla external scripts/CSP may be restricting it');});
+  // The Xsolla Partner Network link also uses the transparent on-air layout in Lightstream.
+  document.body.classList.add('isocore-lightstream');
+  var style=document.createElement('link');style.rel='stylesheet';style.href=HOST+'/assets/lightstream.css?v=13';document.head.appendChild(style);
+  function load(path){return new Promise(function(ok,bad){var s=document.createElement('script');s.src=HOST+'/assets/'+path+'?v=13';s.crossOrigin='anonymous';s.onload=ok;s.onerror=function(){bad(Error('SCRIPT BLOCKED: '+path))};document.head.appendChild(s);});}
+  load('stage.js').then(function(){return load('overlay-stage.js')}).then(function(){return load('lightstream-dialogue.js')}).then(function(){return load('bridge.js')}).catch(function(e){err(e.message+' · Xsolla external scripts/CSP may be restricting it');});
 })();
