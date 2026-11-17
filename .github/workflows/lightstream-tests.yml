@@ -7,6 +7,13 @@ on:
       - 'public/assets/bridge.js'
       - 'public/assets/ig-ghost-world-xsolla.js'
       - 'tests/lightstream.test.mjs'
+      - 'src/worker.mjs'
+      - 'src/chat-bot.mjs'
+      - 'wrangler.jsonc'
+      - 'public/control.html'
+      - 'migrations/0003_twitch_dual_chat.sql'
+      - 'tests/chat-bot.test.mjs'
+      - 'tests/worker.test.mjs'
       - '.github/workflows/lightstream-tests.yml'
   push:
     branches:
@@ -26,5 +33,7 @@ jobs:
           node --check public/assets/bridge.js
           node --check public/assets/ig-ghost-world-xsolla.js
           node --check public/assets/lightstream-dialogue.js
+          node --check src/worker.mjs
+          node --check src/chat-bot.mjs
       - name: Run Lightstream overlay unit tests
-        run: node --test tests/lightstream.test.mjs
+        run: node --test tests/lightstream.test.mjs tests/worker.test.mjs tests/chat-bot.test.mjs
