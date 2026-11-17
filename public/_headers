@@ -4,3 +4,11 @@
   X-Content-Type-Options: nosniff
 /*.html
   X-Robots-Tag: noindex, nofollow
+
+# Live commentary and camera controllers must refresh after a hotfix.
+/assets/bridge.js
+  Cache-Control: no-store
+/assets/lightstream-dialogue.js
+  Cache-Control: no-store
+/assets/ig-ghost-world-xsolla.js
+  Cache-Control: no-store

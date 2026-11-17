@@ -2,6 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
+import {canonicalGameName} from '../src/worker.mjs';
 
 const read=p=>readFileSync(p,'utf8');
 const html=read('public/lightstream.html');
@@ -42,7 +43,7 @@ test('Xsolla Free path receives the same on-air layout and camera captions',()=>
   assert.doesNotThrow(()=>new Function(xsolla));
   assert.ok(!xsolla.includes('REPLACE_WITH_YOUR_DEPLOYED_ISOCORE_BROADCAST_HOST'));
   assert.ok(!xsolla.includes('iso-debug-panel'));
-  assert.ok(xsolla.includes("var VERSION = '17'"));
+  assert.ok(xsolla.includes("var VERSION = '18'"));
   assert.doesNotMatch(xsolla,/(CONTROL_TOKEN|TWITCH_BOT_ACCESS_TOKEN|TELEMETRY_TOKEN)/);
 });
 
@@ -56,6 +57,7 @@ test('Ghost and Echo dialogue appears directly below camera, as plain text',()=>
   });
   const cam=createElement('div');
   const root=createElement('main');
+  root.getBoundingClientRect=()=>({width:1920,height:1080});
   root.appendChild=function(el){caption=el;this.children.push(el);el.parentNode=this};
   const doc={
     body:{classList:{contains:()=>false}},
@@ -74,11 +76,33 @@ test('Ghost and Echo dialogue appears directly below camera, as plain text',()=>
   assert.equal(caption.parentNode,root);
   assert.equal(caption.hidden,true);
   assert.match(caption.style.rules.top[0],/26\.018519%/);
-  handlers['isocore:dialogue']({detail:{who:'ghost',text:'Hello from Ghost!'}});
+  // Arena storylines must never appear under the live camera.
+  handlers['isocore:dialogue']({detail:{who:'ghost',text:'You walked through me!',source:'arena'}});
+  assert.equal(caption.hidden,true);
+  handlers['isocore:dialogue']({detail:{who:'echo',text:'Tyres and braking points matter.',source:'game'}});
   assert.equal(caption.hidden,false);
-  assert.equal(caption.dataset.who,'ghost');
-  assert.equal(caption.children[0].textContent,'GHOST //');
-  assert.equal(caption.children[1].textContent,'Hello from Ghost!');
+  assert.equal(caption.dataset.who,'echo');
+  assert.equal(caption.children[0].textContent,'ECHO //');
+  assert.equal(caption.children[1].textContent,'Tyres and braking points matter.');
+  assert.match(captions,/source!=='game'/);
+  assert.match(xsollaCSS,/-webkit-line-clamp:2/);
+  assert.match(captions,/10\.5\*scale/);
+});
+
+test('Game name normalisation preserves GTA VI and other titles',()=>{
+  assert.equal(canonicalGameName('Grand Theft Auto VI'),'Grand Theft Auto VI');
+  assert.equal(canonicalGameName('GTA VI'),'Grand Theft Auto VI');
+  assert.equal(canonicalGameName('G a d Thef Au o VI'),'Grand Theft Auto VI');
+  assert.equal(canonicalGameName('Gran Turismo 7'),'Gran Turismo 7');
+  assert.equal(canonicalGameName('Call of Duty'),'Call of Duty');
+  assert.equal(canonicalGameName('Grand Theft Auto V'),'Grand Theft Auto V');
+  assert.equal(canonicalGameName('No Man’s Sky'),'No Man’s Sky');
+});
+
+test('Broadcast scene does not send arena storylines into dialogue captions',()=>{
+  assert.match(engine,/function onAirLine\(who,text\) \{[\s\S]{0,240}if \(SEALED\) return;/);
+  assert.match(captions,/source:'game'/);
+  assert.match(captions,/echoTemplates/);
 });
 
 test('No private control credential or external writable API in on-air assets',()=>{

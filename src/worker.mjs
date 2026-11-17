@@ -114,6 +114,20 @@ async function twitchAppAccessToken(env){
   twitchAppExpiresAt=now+Math.max(60,Number(data.expires_in||3600)-300);
   return twitchAppToken;
 }
+// Canonicalise GTA VI even if an older mobile form saved dropped letters.
+// Restrict fuzzy handling to the distinctive GTA title ending in VI/6, so
+// unrelated Twitch game names are never silently changed.
+export function canonicalGameName(value){
+  const clean=String(value||'').normalize('NFKC')
+    .split('').map(c=>{const n=c.charCodeAt(0);return n<32||n===127?' ':c;}).join('')
+    .trim().replace(/ +/g,' ').slice(0,100);
+  const key=clean.toLowerCase().replace(/[^a-z0-9]/g,'');
+  if(['gtavi','gta6','grandtheftautovi','grandtheftauto6'].includes(key)||
+     /^g[a-z]{0,4}thef[a-z]{0,4}au[a-z]{0,3}(?:vi|6)$/.test(key)){
+    return 'Grand Theft Auto VI';
+  }
+  return clean;
+}
 async function getStreamContext(env){
   const channel=String(env.TWITCH_CHANNEL_LOGIN||'igvain').trim().toLowerCase();
   // The owner can set GTA VI before Twitch goes live. Manual override takes
@@ -123,7 +137,7 @@ async function getStreamContext(env){
       const saved=await env.DB.prepare('SELECT game, updated_at FROM stream_game_override WHERE id=1').first();
       if(saved&&saved.game){
         return {ok:true,configured:true,channel,live:null,
-          game:String(saved.game).slice(0,100),title:'',
+          game:canonicalGameName(saved.game),title:'',
           updated_at:Number(saved.updated_at||time()),source:'owner'};
       }
     }
@@ -154,7 +168,7 @@ async function getStreamContext(env){
     const live=data&&Array.isArray(data.data)?data.data[0]:null;
     const answerData={
       ok:true,configured:true,channel,live:!!live,
-      game:live?String(live.game_name||'').slice(0,100):'',
+      game:live?canonicalGameName(live.game_name):'',
       title:live?String(live.title||'').slice(0,160):'',
       updated_at:now,source:'twitch'
     };
@@ -188,7 +202,7 @@ async function api(request,env,path){
   let data;try{data=await bodyJSON(request);}catch{return fail('Invalid JSON or oversized payload');}
   if(path==='/api/game'){
     if(typeof data.game!=='string'||data.game.length>100)return fail('Game name must be 100 characters or fewer');
-    const game=data.game.trim().replace(/[\\r\\n\\t]/g,' ');
+    const game=canonicalGameName(data.game);
     try{
       // One-time, owner-authorised setup avoids requiring Wrangler/D1 CLI on a
       // mobile-only launch. The included 0002 migration is still canonical.

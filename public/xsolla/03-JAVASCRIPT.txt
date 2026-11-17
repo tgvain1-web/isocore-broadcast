@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   var HOST = 'https://isocore-broadcast.tgvain1.workers.dev';
-  var VERSION = '17';
+  var VERSION = '18';
 
   function load(file) {
     return new Promise(function (resolve, reject) {
