@@ -31,8 +31,8 @@ test('The caption handler is loaded before bridge, and code parses',()=>{
 });
 
 test('Xsolla Free path receives the same on-air layout and camera captions',()=>{
-  assert.match(xsolla,/classList\\.add\\('isocore-lightstream'\\)/);
-  assert.match(xsolla,/assets\\/lightstream\\.css/);
+  assert.ok(xsolla.includes("classList.add('isocore-lightstream')"));
+  assert.ok(xsolla.includes('assets/lightstream.css'));
   assert.ok(xsolla.indexOf("load('lightstream-dialogue.js')") < xsolla.indexOf("load('bridge.js')"));
   assert.ok(engine.includes("document.body.classList.contains('isocore-lightstream')"));
   assert.doesNotThrow(()=>new Function(xsolla));
