@@ -39,6 +39,22 @@
     Object.keys(rules).forEach(function(key){
       element.style.setProperty(key.replace(/[A-Z]/g,function(c){return '-'+c.toLowerCase();}),rules[key],'important');
     });
+    // Size text to the *broadcast canvas*, not the phone's full viewport.
+    // Xsolla editor scales 1920x1080 into a small canvas: the old vw-based
+    // font stayed huge while the camera shrank, causing five-line captions.
+    var size=parent.getBoundingClientRect();
+    var scale=Math.max(.15,Math.min(1.5,(size.width||1920)/1920,(size.height||1080)/1080));
+    element.style.setProperty('font','600 '+(10.5*scale)+'px/1.25 Arial, sans-serif','important');
+    element.style.setProperty('padding',(4*scale)+'px '+(6*scale)+'px','important');
+    element.style.setProperty('gap',(5*scale)+'px','important');
+    element.style.setProperty('max-height',(40*scale)+'px','important');
+    var lineEl=element.children[1];
+    if(lineEl&&lineEl.style){
+      lineEl.style.setProperty('display','-webkit-box','important');
+      lineEl.style.setProperty('-webkit-line-clamp','2','important');
+      lineEl.style.setProperty('-webkit-box-orient','vertical','important');
+      lineEl.style.setProperty('overflow','hidden','important');
+    }
     return element;
   }
   function renderNext(){
@@ -54,7 +70,9 @@
   }
   window.addEventListener('isocore:dialogue',function(e){
     var d=e.detail||{},who=d.who,text=String(d.text||'').trim().slice(0,220);
-    if((who!=='ghost'&&who!=='echo')||!text)return;
+    // Only explicitly game-sourced lines are allowed on a public stream.
+    // Reject all legacy arena/lore/taunts, including stale WebGL events.
+    if((who!=='ghost'&&who!=='echo')||!text||d.source!=='game')return;
     var key=who+'|'+text,now=Date.now();
     if(key===current&&now-time<8000)return;
     current=key;time=now;
@@ -70,38 +88,66 @@
   // (or the owner's explicit game override), NOT unseen gameplay events.
   // This is game-aware scripted commentary, not video analysis or AI inference.
   var gameContext=null,commentIndex=0,lastComment=0,lastGame='';
+  // Short subtitles deliberately fit a 500px camera-width text strip.
+  // These are game-specific prompts, not claims that we have seen gameplay.
   var gameTemplates={
     gta:[
-      'Vice City has plenty of ways to make a bad decision look tempting. What is the plan tonight?',
-      'If a police chase starts, having an escape route is usually smarter than hoping for a miracle.',
-      'Driving fast is easy. Getting away clean is the challenge.',
-      'Chat, are we going for the main story or getting distracted by the open world?',
-      'Grand Theft Auto VI tonight. I want to see how much trouble this city can throw at us.',
-      'Vehicles, missions, and a city full of distractions. I have a feeling this could get chaotic.'
+      'Vice City tonight. Story missions or free roaming?',
+      'A police chase calls for an escape plan, not just speed.',
+      'Chat, which GTA VI vehicle do you want to see first?',
+      'The open world can wait. Or can it?',
+      'Grand Theft Auto VI. What should we explore first?'
     ],
     gt7:[
-      'Gran Turismo 7 rewards consistency. A clean lap often beats an overambitious one.',
-      'Tyre life and fuel strategy matter just as much as raw speed.',
-      'Echo will be watching the racing line. I will be watching for risky decisions.',
-      'Chat, would you push now or save the tyres for later?'
+      'Gran Turismo 7 rewards clean and consistent laps.',
+      'Tyre strategy matters as much as raw pace.',
+      'Chat, would you push now or save the tyres?',
+      'A clean overtake is worth more than a risky lunge.'
     ],
     cod:[
-      'Call of Duty tonight. Positioning and awareness are as important as aiming.',
-      'One good rotation can change an entire round. Keep the objectives in mind.',
-      'Chat, do you play aggressively or hold angles and let opponents make the mistake?',
-      'The scoreboard matters, but the teamwork behind it matters more.'
+      'Call of Duty tonight. Positioning wins fights.',
+      'Objectives matter as much as eliminations.',
+      'Chat, do you push hard or hold your angles?',
+      'A smart rotation can change the whole round.'
     ],
     nms:[
-      'No Man’s Sky is all about discovering what is beyond the next jump.',
-      'Resource planning makes the difference between a smooth expedition and a long walk home.',
-      'Chat, what would you explore first: a new planet or a derelict freighter?',
-      'Exploration is better when you still have enough fuel to make it back.'
+      'No Man’s Sky tonight. Where should we explore first?',
+      'Keep some fuel for the return journey.',
+      'New planet or derelict freighter, chat?',
+      'A little preparation makes space exploration easier.'
     ],
     generic:[
-      'We are playing {game}. Chat, what should we focus on first?',
-      '{game} is on the schedule tonight. Give me your best strategy tips in chat.',
-      'I want to hear what you enjoy most about {game}.',
-      'What is the most satisfying thing to pull off in {game}?'
+      'We are playing {game}. What should we focus on?',
+      'Chat, what is your favourite part of {game}?',
+      'Any tips for getting started in {game}?',
+      'What is the best challenge in {game}?'
+    ]
+  };
+  var echoTemplates={
+    gta:[
+      'I want to see how the GTA VI cars handle.',
+      'A good corner exit is useful even in Vice City.',
+      'Which vehicle should we take for a drive?'
+    ],
+    gt7:[
+      'Smooth steering makes a fast lap.',
+      'Watch the braking points and tyre wear.',
+      'Fuel saved now can pay off in the final laps.'
+    ],
+    cod:[
+      'Movement and timing. That is the difference.',
+      'Plan the exit before taking a risky route.',
+      'I would focus on a clean objective push.'
+    ],
+    nms:[
+      'Ship handling matters when trouble starts.',
+      'Never run low on launch fuel.',
+      'I would take the scenic route through space.'
+    ],
+    generic:[
+      'What is the trickiest part of {game}?',
+      'I want to see what makes {game} interesting.',
+      'Chat, what should we try in {game}?'
     ]
   };
   function gameLines(name){
@@ -120,11 +166,18 @@
     if(now-lastComment<85000)return;
     var name=gameContext.game;
     if(name!==lastGame){commentIndex=0;lastGame=name;}
-    var lines=gameLines(name);
-    var line=lines[commentIndex++ % lines.length].replace(/\{game\}/g,name);
+    var mainLines=gameLines(name);
+    var key=Object.keys(gameTemplates).filter(function(k){return gameTemplates[k]===mainLines})[0]||'generic';
+    // Ghost leads the stream; Echo occasionally joins in with his own take.
+    var turn=commentIndex++;
+    var echoTurn=(turn%3===2);
+    var who=echoTurn?'echo':'ghost';
+    var options=echoTurn?echoTemplates[key]:mainLines;
+    var index=echoTurn?Math.floor(turn/3):turn-Math.floor(turn/3);
+    var line=options[index%options.length].replace(/\{game\}/g,name);
     lastComment=now;
     window.dispatchEvent(new CustomEvent('isocore:dialogue',{
-      detail:{who:'ghost',text:line}
+      detail:{who:who,text:line,source:'game'}
     }));
   }
   function getGame(){
