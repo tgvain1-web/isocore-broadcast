@@ -11,7 +11,7 @@
   const HOST = new URL('../',document.currentScript && document.currentScript.src || location.href).href;
   const $ = id => document.getElementById(id);
   let who='ghost',shot='first',ready=false,apiOK=false,booted=false;
-  ROOT.innerHTML = '<div id="iso-camera" class="ghost"><div id="igwHomeSlot"></div><div id="iso-camera-label">GHOST // FIRST CAMERA</div></div><div id="iso-overlay-shell"></div><div id="iso-diag">ISOCORE // HTML ACTIVE · CONNECTING</div>';
+  ROOT.innerHTML = '<div id="iso-camera" class="ghost"><div id="igwHomeSlot"></div><div id="iso-camera-label">GHOST // STREAMER CAM</div></div><div id="iso-overlay-shell"></div><div id="iso-diag">ISOCORE // HTML ACTIVE · CONNECTING</div>';
   const diag=$('iso-diag');
   function scaleOverlay(){
     const el=$('iso-overlay-shell');if(!el)return;
@@ -38,7 +38,7 @@
       const value=await resp.json();apiOK=true;
       const c=value.camera||{};who=c.who==='echo'?'echo':'ghost';shot=['first','shoulder','side','wide','high'].includes(c.shot)?c.shot:'first';
       $('iso-camera').className=who;
-      $('iso-camera-label').textContent=who.toUpperCase()+' // '+(shot==='high'?'JUMBOTRON':shot.toUpperCase())+' CAMERA';
+      $('iso-camera-label').textContent=who.toUpperCase()+' // '+(shot==='first'?'STREAMER CAM':shot==='high'?'JUMBOTRON CAMERA':shot.toUpperCase()+' CAMERA');
       const st=$('ig-ghost-world');const engine=st&&st._igw;
       if(engine&&typeof engine.broadcast==='function'){
         if(engine.broadcast(who,shot)){
