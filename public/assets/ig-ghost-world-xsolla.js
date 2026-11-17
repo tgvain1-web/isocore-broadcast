@@ -3526,8 +3526,8 @@
           // Keep the same lens-to-host distance, eye-level height and face target.
           var orbit = new T.Vector3(su.monitorCam[0] - e[0], 0, su.monitorCam[2] - e[2]);
           orbit.applyAxisAngle(new T.Vector3(0, 1, 0), Math.PI / 4);
-          // Pull the lens 35 cm back along its view radius. Do not slide it into the monitor mesh.
-          orbit.setLength(orbit.length() + .35);
+          // Pull the lens 70 cm back in total along its view radius (35 cm more).
+          orbit.setLength(orbit.length() + .70);
           return [[e[0] + orbit.x, su.monitorCam[1], e[2] + orbit.z], [e[0], e[1] + .60, e[2]]];
         }
         // STREAMER CAM: camera is placed beyond the rig's monitor array,
