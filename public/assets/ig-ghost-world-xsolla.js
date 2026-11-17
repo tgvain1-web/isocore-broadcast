@@ -3357,7 +3357,7 @@
               towardHost.set(-Math.sin(SUITES[c[0]].yaw), 0, Math.cos(SUITES[c[0]].yaw));
             }
             towardHost.normalize();
-            var lens = screenCentre.clone().addScaledVector(towardHost, .28);
+            var lens = screenCentre.clone().addScaledVector(towardHost, .48); // 20 cm nearer the seated host.
             lens.y = screenBox.max.y + .22;
             SUITES[c[0]].monitorCam = [lens.x, lens.y, lens.z];
           }
