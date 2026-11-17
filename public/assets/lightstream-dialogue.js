@@ -1,18 +1,32 @@
 /* Isocore Live Camera subtitles; no personal data or authorization tokens. */
 (function(){
   'use strict';
+  if(window.__isocoreDialogueLoaded)return;
+  window.__isocoreDialogueLoaded=true;
   var root=document.getElementById('isocore-broadcast');
   if(!root)return;
   var queue=[],current='',time=0,timer=0,element=null;
   function mount(){
-    if(element)return element;
-    var cam=document.getElementById('iso-camera');
-    if(!cam)return null;
-    element=document.createElement('div');element.id='iso-stream-subtitle';element.hidden=true;
-    var who=document.createElement('strong');who.className='who';
-    var line=document.createElement('span');line.className='line';
-    element.appendChild(who);element.appendChild(line);
-    cam.appendChild(element);return element;
+    var camera=document.getElementById('iso-camera');
+    if(!camera)return null;
+    // Caption belongs to the BROADCAST CANVAS, immediately underneath the
+    // 500x281 camera, not inside the image where it covers the streamer.
+    var parent=document.getElementById('isocore-broadcast');
+    if(!parent)return null;
+    if(element && element.parentNode===parent)return element;
+    element=document.getElementById('iso-stream-subtitle');
+    if(!element){
+      element=document.createElement('div');
+      element.id='iso-stream-subtitle';
+      element.hidden=true;
+      element.setAttribute('role','status');
+      element.setAttribute('aria-live','polite');
+      var who=document.createElement('strong');who.className='who';
+      var line=document.createElement('span');line.className='line';
+      element.appendChild(who);element.appendChild(line);
+    }
+    if(element.parentNode!==parent)parent.appendChild(element);
+    return element;
   }
   function renderNext(){
     if(timer)clearTimeout(timer);
