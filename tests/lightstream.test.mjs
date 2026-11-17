@@ -34,33 +34,46 @@ test('The caption handler is loaded before bridge, and code parses',()=>{
 
 test('Xsolla Free path receives the same on-air layout and camera captions',()=>{
   assert.ok(xsolla.includes("classList.add('isocore-lightstream')"));
-  assert.match(xsollaCSS,/background:transparent!important/);
+  assert.match(xsollaCSS,/background\s*:\s*transparent\s*!important/);
   assert.match(xsollaCSS,/iso-stream-subtitle/);
   assert.match(xsollaHTML,/id="isocore-broadcast"/);
   assert.ok(xsolla.indexOf("load('lightstream-dialogue.js')") < xsolla.indexOf("load('bridge.js')"));
   assert.ok(engine.includes("document.body.classList.contains('isocore-lightstream')"));
   assert.doesNotThrow(()=>new Function(xsolla));
   assert.ok(!xsolla.includes('REPLACE_WITH_YOUR_DEPLOYED_ISOCORE_BROADCAST_HOST'));
-  assert.ok(xsolla.includes('iso-debug-panel'));
-  assert.ok(xsolla.includes("DEBUG=true"));
+  assert.ok(!xsolla.includes('iso-debug-panel'));
+  assert.ok(xsolla.includes("var VERSION = '17'"));
   assert.doesNotMatch(xsolla,/(CONTROL_TOKEN|TWITCH_BOT_ACCESS_TOKEN|TELEMETRY_TOKEN)/);
 });
 
-test('Ghost and Echo spoken lines appear within the camera and are plain text',()=>{
+test('Ghost and Echo dialogue appears directly below camera, as plain text',()=>{
   let caption=null,handlers={};
   const createElement=tag=>({
     tagName:tag,id:'',className:'',hidden:false,dataset:{},children:[],textContent:'',
-    appendChild(child){this.children.push(child)}
+    style:{rules:{},setProperty(key,value,priority){this.rules[key]=[value,priority]}},
+    setAttribute(key,value){this[key]=value},
+    appendChild(child){this.children.push(child);child.parentNode=this}
   });
-  const cam={appendChild(el){caption=el}};
-  const root={};
-  const doc={createElement,getElementById(id){
-    return id==='isocore-broadcast'?root:id==='iso-camera'?cam:null;
-  }};
+  const cam=createElement('div');
+  const root=createElement('main');
+  root.appendChild=function(el){caption=el;this.children.push(el);el.parentNode=this};
+  const doc={
+    body:{classList:{contains:()=>false}},
+    createElement,
+    getElementById(id){
+      return id==='isocore-broadcast'?root:id==='iso-camera'?cam:null;
+    }
+  };
   const win={addEventListener(name,fn){handlers[name]=fn}};
-  vm.runInNewContext(captions,{window:win,document:doc,Date,setTimeout:()=>1,clearTimeout:()=>{}});
+  vm.runInNewContext(captions,{
+    window:win,document:doc,Date,setTimeout:()=>1,clearTimeout:()=>{},
+    setInterval:()=>1
+  });
   assert.ok(caption);
+  assert.equal(cam.children.length,0,'caption must not overlay the camera image');
+  assert.equal(caption.parentNode,root);
   assert.equal(caption.hidden,true);
+  assert.match(caption.style.rules.top[0],/26\.018519%/);
   handlers['isocore:dialogue']({detail:{who:'ghost',text:'Hello from Ghost!'}});
   assert.equal(caption.hidden,false);
   assert.equal(caption.dataset.who,'ghost');
