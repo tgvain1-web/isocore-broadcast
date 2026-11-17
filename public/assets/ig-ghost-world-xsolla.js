@@ -1339,9 +1339,12 @@
       if (!paused) {
         elapsed += Math.min(rawDt, .06); if (mode === 'walk') walkStep(Math.min(rawDt, .4));
         var t = (filmPose && filmPose.ghost) || onAir('ghost') || lifeGoal('ghost') || (SEALED ? [-14.5, 2.2] : PLACES[world.where].at); goal.set(t[0], 0, t[1]);      // in the arena his home is his station
-        var before = currentPos.clone(); currentPos.lerp(goal, .012);
+        var studioGhostSeat = SEALED && SUITES.ghost && SUITES.ghost.seat;
+        var before = currentPos.clone();
+        if (studioGhostSeat) currentPos.set(studioGhostSeat[0], 0, studioGhostSeat[2]);
+        else currentPos.lerp(goal, .012);
         var dx = currentPos.x - before.x, dz = currentPos.z - before.z, walking = dx * dx + dz * dz > .000004;
-        spirit.position.set(currentPos.x, .13 + floorAt(currentPos.x, currentPos.z) + Math.sin(elapsed * 1.25 * pace) * .09, currentPos.z);
+        spirit.position.set(currentPos.x, studioGhostSeat ? studioGhostSeat[1] - 1.02 : .13 + floorAt(currentPos.x, currentPos.z) + Math.sin(elapsed * 1.25 * pace) * .09, currentPos.z);
         blinkers.forEach(function (b, i) { b.visible = Math.sin(elapsed * 2.4 + i) > .55 && !(b.userData.fx && qual === 0); }); fireLights.forEach(function (f, i) { if (f.isLight) f.intensity = 8 + Math.sin(elapsed * 13 + i) * 3; else f.scale.set(1, 1 + Math.sin(elapsed * 11) * .18, 1); }); waters.forEach(function (w) { w.material.opacity = .55 + Math.sin(elapsed * 3) * .15; });
         var pulse = .5 + Math.sin(elapsed * 2.1) * .5, nearGhost = Math.max(0, 1 - Math.hypot(player.x - currentPos.x, player.z - currentPos.z) / 8); halo.material.opacity = .24 + pulse * .14; spark.scale.setScalar(1.0 + pulse * .25 + nearGhost * .12); heart.scale.set(.15 + pulse * .015, .15 + pulse * .015, .1); spinner.rotation.z = elapsed * .22; figure.rotation.z = Math.sin(elapsed * .7 * pace) * .05 * pace; figure.rotation.x = -.1 * nearGhost; clouds.rotation.y = elapsed * .003;
         spirit.rotation.y = filmCam ? Math.atan2(camera.position.x - currentPos.x, camera.position.z - currentPos.z) : (onAir('ghost') && SUITES.ghost && Math.hypot(currentPos.x - SUITES.ghost.seat[0], currentPos.z - SUITES.ghost.seat[2]) < 1.2 ? SUITES.ghost.yaw : lifeFace('ghost', currentPos, elapsed));
@@ -2108,12 +2111,14 @@
     var ECHO_AT = { finish: [15.2, 8.0], pits: [13.4, 9.6], paddock: [19.0, -1.2], studio: [15.4, -12.8], grandstand: [6.2, 18.0], arena: [-4.6, 13.4] };
     var echoPos = new T.Vector3(15.2, 0, 8.0);
     function echoTick(t) {
-      if (!echoOn) return;
+      var studioEchoSeat = SEALED && SUITES.echo && SUITES.echo.seat;
+      if (!echoOn && !studioEchoSeat) return;
       if (echoSpinner) echoSpinner.rotation.z = -t * .22;
       var w = (filmPose && filmPose.echo) || onAir('echo') || lifeGoal('echo') || (SEALED ? [14.5, 2.2] : (X.echo && ECHO_AT[X.echo.where]) || ECHO_AT.finish);
-      echoPos.lerp(new T.Vector3(w[0], 0, w[1]), .012);
+      if (studioEchoSeat) echoPos.set(studioEchoSeat[0], 0, studioEchoSeat[2]);
+      else echoPos.lerp(new T.Vector3(w[0], 0, w[1]), .012);
       if (echoFigure) echoFigure.rotation.x = -.1 * Math.max(0, 1 - Math.hypot(player.x - echoPos.x, player.z - echoPos.z) / 8);
-      echoSpirit.position.set(echoPos.x, .13 + floorAt(echoPos.x, echoPos.z) + Math.sin(t * 1.9 + 1.3) * .11, echoPos.z);
+      echoSpirit.position.set(echoPos.x, studioEchoSeat ? studioEchoSeat[1] - 1.02 : .13 + floorAt(echoPos.x, echoPos.z) + Math.sin(t * 1.9 + 1.3) * .11, echoPos.z);
       echoSpirit.rotation.y = filmCam ? Math.atan2(camera.position.x - echoPos.x, camera.position.z - echoPos.z) : (onAir('echo') && SUITES.echo && Math.hypot(echoPos.x - SUITES.echo.seat[0], echoPos.z - SUITES.echo.seat[2]) < 1.2 ? SUITES.echo.yaw : lifeFace('echo', echoPos, t));
       if (inSuite === 'echo' && camShot === 'first') { echoSpirit.visible = false; suiteHid.echo = true; } else if (suiteHid.echo) { echoSpirit.visible = true; suiteHid.echo = false; }
     }
@@ -3025,12 +3030,16 @@
     // While one of them is streaming (their side is live on Twitch, or the host is broadcasting from their seat), they go and stand
     // at their own rig on the stage and stay there until it ends (README-ADMIN 260).
     var AIR_AT = { ghost: [-17.4, 2.1], echo: [17.4, 2.1] };
+    // V0.6.5: the broadcast studio has permanent seats, whether or not Twitch is live.
+    // The rig camera and avatar must share the SAME chair anchor, not separate stage positions.
     // only bring a character back into view if it was hidden because you were sitting in its seat
     var suiteHid = { ghost: false, echo: false };
     function onAir(w) {
       if (!SEALED) return null;
-      var st = (world.extra || {}).stream || {}, live = inSuite === w || !!sideStream(w);
-      return live ? (SUITES[w] && SUITES[w].seat ? [SUITES[w].seat[0], SUITES[w].seat[2]] : AIR_AT[w]) : null;      /* README-ADMIN 298: in the seat at their rig */
+      var seat = SUITES[w] && SUITES[w].seat;
+      if (seat) return [seat[0], seat[2]]; // both broadcast characters occupy their chairs all session
+      var live = inSuite === w || !!sideStream(w);
+      return live ? AIR_AT[w] : null;
     }
     // the height of the stage (or the floor) under a spot, so they float above the dais rather than through it
     var floorRay = null, floorMemo = {};
@@ -3320,6 +3329,16 @@
     function placeSuites() {
       try { plotRoots.forEach(function (g) { g.visible = false; }); } catch (e) {}
       try { fitCharacters(); } catch (e) { modelInfo.chars = { state: 'error', err: String(e).slice(0, 200) }; }
+      // In the isolated broadcast studio both anonymous hosts are present.
+      // Unlike the original AI world, Echo does not require separate live-site data to appear.
+      echoOn = true; echoOut = true; ghostOut = true; echoSpirit.visible = true;
+      [spirit, echoSpirit].forEach(function (group) {
+        var avatar = group.userData.character;
+        if (!avatar || avatar.userData.broadcastSeated) return;
+        avatar.scale.multiplyScalar(.78); // compact floating-cloak avatar fits inside the chair/cockpit
+        avatar.rotation.x = -.08; // subtle forward lean toward the monitors
+        avatar.userData.broadcastSeated = true;
+      });
       // frame rate (README-ADMIN 261): the old hand-built arena's four floodlights and lamp glow are not needed under the new arena's
       // own lights, and every light is work for every pixel on a phone
       try { concourseLights.forEach(function (l) { l.visible = false; l.intensity = 0; }); lampFill.visible = false; indoor(); } catch (e) {}
@@ -3783,8 +3802,15 @@
       coverBar.style.width = pct + '%'; coverTxt.textContent = (coverDone >= coverN ? 'CORE // building the memory ' : 'CORE // establishing link ') + pct + '% (' + coverDone + ' of ' + coverN + ')'; cover.setAttribute('aria-valuenow', String(pct));
     }
     function coverHide() { if (!cover) return; coverBar.style.width = '100%'; var c = cover; cover = null; c.style.transition = 'opacity .5s'; c.style.opacity = '0'; setTimeout(function () { if (c.parentNode) c.parentNode.removeChild(c); }, 600); }
+    var broadcastModelLoadStarted = false, broadcastModelBuildPending = false;
     function loadModels() {
+      if (broadcastModelLoadStarted) return;
+      broadcastModelLoadStarted = true;
+      // Large rigs and avatars are requested before audience and props, so their fetches
+      // enter the browser's loading queue first. All original arena content remains.
+      var priority = ['arena', 'stage-main', 'station', 'simrig', 'ghost', 'echo'];
       var names = Object.keys(world.models).filter(function (n) { return MODEL_SLOTS[n]; });
+      names.sort(function (a,b) { var ai=priority.indexOf(a), bi=priority.indexOf(b); return (ai<0?100:ai)-(bi<0?100:bi); });
       if (!names.length) return;
       // Suppress the in-world loading-logo intro. Keep model progress internal.
       coverN = names.length;
@@ -3804,7 +3830,9 @@
           ZONE = null;
         });
         stage.dataset.modelsShown = Object.keys(modelInfo).filter(function (k2) { return modelInfo[k2].state === 'shown'; }).join(',');
-        try { buildLater(); } catch (e) { window.__igwArenaErr = String(e && e.stack || e).slice(0, 400); }
+        if (ready) {
+          try { buildLater(); } catch (e) { window.__igwArenaErr = String(e && e.stack || e).slice(0, 400); }
+        } else broadcastModelBuildPending = true;
         setTimeout(coverHide, 300);
       }
       // README-ADMIN 285: the models may be Draco or meshopt compressed and use KTX2 textures; the decoders only download when a
@@ -3814,8 +3842,10 @@
         try { if (ms[1]) { var dl = new ms[1].DRACOLoader(); dl.setDecoderPath(vb + 'draco/'); loader.setDRACOLoader(dl); } } catch (e) {}
         try { if (ms[2]) { var kl = new ms[2].KTX2Loader(); kl.setTranscoderPath(vb + 'basis/'); kl.detectSupport(renderer); loader.setKTX2Loader(kl); } } catch (e) {}
         try { if (ms[3] && ms[3].MeshoptDecoder) loader.setMeshoptDecoder(ms[3].MeshoptDecoder); } catch (e) {}
+        var availableFast = { arena:1, 'stage-main':1, station:1, simrig:1, ghost:1, echo:1, audience:1, 'audience-blue':1, 'audience-olive':1, 'audience-rust':1, 'audience-cheering':1, 'camera-jib':1, 'camera-tripod':1, 'mods-sign':1 };
+        var fullModels = false; try { fullModels = (new URLSearchParams(location.search)).get('fullmodels') === '1'; } catch (e) {}
         names.forEach(function (n) {
-          var src = world.models[n], low = (typeof qual === 'number' && qual === 0) ? String(src).replace(/\.glb(\?|$)/, '-low.glb$1') : '';
+          var src = world.models[n], low = availableFast[n] && !fullModels ? String(src).replace(/\.glb(\?|$)/, '-low.glb$1') : '';
           if (low && low !== src) { loader.load(low, function (g2) { lowOk(g2); }, null, function () { normal(); }); } else normal();
           function lowOk(gltf) { if (disposed) return; var root = gltf.scene || (gltf.scenes && gltf.scenes[0]); if (!root) { normal(); return; } if (gltf.animations && gltf.animations.length) root.userData.anims = gltf.animations; got[n] = root; done(); }
           function normal() { loader.load(world.models[n], function (gltf) {
@@ -3903,7 +3933,19 @@
       if (moved) unjoin();
     }
     setInterval(function () { if (!disposed) joinWatch(); }, 1000);
-    function goLive() { if (ready) return; try { joinStatic(); } catch (e) { try { unjoin(); } catch (e2) {} window.__igwJoinErr = String(e && e.stack || e).slice(0, 300); } ready = true; liveAt = performance.now(); stage.classList.remove('is-loading'); stage.classList.add('is-live'); wake(); var mn0 = Object.keys(world.models).filter(function (n) { return MODEL_SLOTS[n]; }).length; if (mn0) coverShow(mn0); else { var pre0 = stage.querySelector('.igw-precover'); if (pre0 && pre0.parentNode) pre0.parentNode.removeChild(pre0); } setTimeout(loadModels, 60); }
+    function goLive() {
+      if (ready) return;
+      try { joinStatic(); } catch (e) { try { unjoin(); } catch (e2) {} window.__igwJoinErr = String(e && e.stack || e).slice(0, 300); }
+      ready = true; liveAt = performance.now(); stage.classList.remove('is-loading'); stage.classList.add('is-live'); wake();
+      // The GLB downloads are already running while shaders compile. If they finish first,
+      // build the studio now; do not wait for another full loading sequence.
+      if (broadcastModelBuildPending) {
+        broadcastModelBuildPending = false;
+        try { buildLater(); } catch (e) { window.__igwArenaErr = String(e && e.stack || e).slice(0, 400); }
+      }
+      if (!broadcastModelLoadStarted) loadModels();
+      var pre0 = stage.querySelector('.igw-precover'); if (pre0 && pre0.parentNode) pre0.parentNode.removeChild(pre0);
+    }
     (function () {
       try {
         if (!renderer.compileAsync) { goLive(); return; }
@@ -3913,6 +3955,9 @@
         pr.then(goLive, goLive); setTimeout(goLive, 15000);
       } catch (e) { try { renderer.setRenderTarget(null); } catch (e2) {} goLive(); }
     })();
+    // Download/decode the existing compact GLBs while the renderer prepares its shaders,
+    // instead of beginning all model transfers up to 15 seconds after startup.
+    loadModels();
     // For the tests, and for nothing else: where a place and the ghost are on the screen right now.
     var lifeFrom = scene.children.length;
     // ---- Life: Ghost and Echo as two characters who live here. Each one picks what to do next (patrol their side,
@@ -4146,7 +4191,12 @@
       var dt = Math.min(.1, Math.max(0, t - lifeLast)); lifeLast = t;
       ['ghost', 'echo'].forEach(function (w) {
         var a = ACT[w], out = isOut(w); a.obj.visible = out; if (w === 'ghost') shadow.visible = out;
-        keepOut(a.pos); a.obj.position.x = a.pos.x; a.obj.position.z = a.pos.z; if (w === 'ghost') shadow.position.set(a.pos.x, .125, a.pos.z);
+        // A chair is normally marked solid for walking. Seated hosts are deliberately exempt
+        // from collision push-out; otherwise both characters get pushed BESIDE their rigs.
+        var occupiedSeat = SEALED && SUITES[w] && SUITES[w].seat;
+        if (occupiedSeat) a.pos.set(occupiedSeat[0], 0, occupiedSeat[2]);
+        else keepOut(a.pos);
+        a.obj.position.x = a.pos.x; a.obj.position.z = a.pos.z; if (w === 'ghost') shadow.position.set(a.pos.x, .125, a.pos.z);
         if (a.b.sp.visible && (t > a.b.until || !out)) a.b.sp.visible = false;
         if (a.b.sp.visible) { var bd = Math.hypot(camera.position.x - a.pos.x, camera.position.z - a.pos.z), bs = Math.max(1.3, Math.min(4.6, bd * .3)); a.b.sp.scale.set(bs, bs * .262, 1); a.b.sp.position.y = 2.6 + bs * .24; }      /* a bubble is the same size on screen near or far, never a wall of text in your face */
         if (!out) { a.anger = 0; a.angry = false; return; }
