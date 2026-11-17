@@ -3810,6 +3810,16 @@
       // enter the browser's loading queue first. All original arena content remains.
       var priority = ['arena', 'stage-main', 'station', 'simrig', 'ghost', 'echo'];
       var names = Object.keys(world.models).filter(function (n) { return MODEL_SLOTS[n]; });
+      // In Lightstream's live browser source, fetch only the arena and six things
+      // needed to render both hosts and their rigs. The full interactive world,
+      // original preview and ?models=all keep every model unchanged.
+      var liveOverlay = /\/lightstream\.html$/i.test(location.pathname);
+      var allModels = false;
+      try { allModels = new URLSearchParams(location.search).get('models') === 'all'; } catch (e) {}
+      if (liveOverlay && !allModels) {
+        var required = {arena:1,'stage-main':1,station:1,simrig:1,ghost:1,echo:1};
+        names = names.filter(function (n) { return required[n] === 1; });
+      }
       names.sort(function (a,b) { var ai=priority.indexOf(a), bi=priority.indexOf(b); return (ai<0?100:ai)-(bi<0?100:bi); });
       if (!names.length) return;
       // Suppress the in-world loading-logo intro. Keep model progress internal.
@@ -4048,6 +4058,12 @@
     var echoLight = null, echoHalo = null; echoSpirit.traverse(function (o) { if (o.isLight) echoLight = o; });
     echoSpirit.traverse(function (o) { if (o.isSprite && !echoHalo && o.material && o.material.color && o.material.color.getHSL({}).s > .3) echoHalo = o; });
     var ACT = { ghost: actor('ghost', spirit, currentPos, ghostLight, halo, spinner, figure), echo: actor('echo', echoSpirit, echoPos, echoLight, echoHalo, echoSpinner, echoFigure) };
+    // The actual 3D character line becomes a caption INSIDE the camera.
+    // Only the dedicated Lightstream page receives these events.
+    function onAirLine(who,text) {
+      if(!document.body.classList.contains('isocore-lightstream') || !text) return;
+      try { window.dispatchEvent(new CustomEvent('isocore:dialogue',{detail:{who:who,text:text}})); } catch(e){}
+    }
     function isOut(who) { var guest = ACT && ACT[who] && ACT[who].guestUntil > elapsed; return who === 'ghost' ? (typeof ghostOut === 'undefined' || ghostOut || guest) : (echoOn && (typeof echoOut === 'undefined' || echoOut || guest)); }
     // Free will (Scout's PC on): nothing scripted is said. They only say the lines they wrote themselves with their last choice:
     // what they said about it, four more things to say while they are at it, and what to say to a member who walks up.
@@ -4063,11 +4079,11 @@
     }
     function speak(a, kind, force) { if (filmPose) return;
       var t = elapsed; if (!force && t - a.lastSay < 7) return;
-      if (freeOn()) { if (!force && t - a.lastSay < 18) return; var own = freeLine(a, kind); if (!own) return; a.lastSay = t; drawBubble(a.b, a.who, own, a.angry); a.b.sp.visible = true; a.b.until = t + Math.max(3.5, own.length * .075); a.mouth = a.b.until; a.lastLine = own; return; }
+      if (freeOn()) { if (!force && t - a.lastSay < 18) return; var own = freeLine(a, kind); if (!own) return; a.lastSay = t; drawBubble(a.b, a.who, own, a.angry); a.b.sp.visible = true; a.b.until = t + Math.max(3.5, own.length * .075); a.mouth = a.b.until; a.lastLine = own; onAirLine(a.who,own); return; }
       var list = LINES[a.who][kind]; if (!list) return; var text = fill(pickOne(list), a.who); a.lastSay = t;
       drawBubble(a.b, a.who, text, a.angry || kind === 'angry'); a.b.sp.visible = true; a.b.until = t + Math.max(3.5, text.length * .075); a.mouth = a.b.until;
       
-      a.lastLine = text;
+      a.lastLine = text; onAirLine(a.who,text);
     }
     function shoutLine(who, text) {
       ticker.textContent = ''; ticker.appendChild(el('b', 'igw-ticker-' + who, who === 'echo' ? 'ECHO' : 'GHOST')); ticker.appendChild(document.createTextNode(' ' + text));
@@ -4209,7 +4225,7 @@
         // talk
         if (a.act === 'visit' && a.visitSay && Math.hypot(a.target[0] - a.pos.x, a.target[1] - a.pos.z) < 2.5) { a.visitSay = false; speak(a, 'visit', true); }
         else if (a.act === 'greet' && a.greetName && pd < 6.5) { a.greetName = false; speak(a, 'greetYou', true); }
-        else if (a.act === 'will' && a.willSay && Math.hypot(a.target[0] - a.pos.x, a.target[1] - a.pos.z) < 2.5 && pd < 24) { var ws = a.willSay; a.willSay = ''; a.lastSay = t; drawBubble(a.b, a.who, ws, a.angry); a.b.sp.visible = true; a.b.until = t + Math.max(4, ws.length * .075); a.mouth = a.b.until; a.lastLine = ws; }
+        else if (a.act === 'will' && a.willSay && Math.hypot(a.target[0] - a.pos.x, a.target[1] - a.pos.z) < 2.5 && pd < 24) { var ws = a.willSay; a.willSay = ''; a.lastSay = t; drawBubble(a.b, a.who, ws, a.angry); a.b.sp.visible = true; a.b.until = t + Math.max(4, ws.length * .075); a.mouth = a.b.until; a.lastLine = ws; onAirLine(a.who,ws); }
         else if (a.act === 'greet' && pd < 6.5 && t - a.lastSay > 9) speak(a, 'greet');
         else if (a.act === 'rival' && a.spread && r.angry && Math.hypot(r.pos.x - a.pos.x, r.pos.z - a.pos.z) < 6 && t - a.lastSay > 6) { speak(a, 'rivalAngry', true); r.anger = Math.max(0, Math.min(1, r.anger + (a.spread === 'calm' ? -.25 : .15))); a.spread = ''; }
         else if (a.act === 'rival' && isOut(r.who) && Math.hypot(r.pos.x - a.pos.x, r.pos.z - a.pos.z) < 6 && t - Math.max(a.lastSay, r.lastSay) > 5) speak(a, 'rival');
@@ -4577,7 +4593,7 @@
       if (prank.key && !local) {                               // the site's prank: give it back for real (members only)
         fetch(ISOCORE_ASSET_BASE + 'api/ghost.mine', { credentials: 'same-origin', cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) {
           if ((!d || !d.csrf) && freeOn()) { if (status) status.textContent = 'Log in with Discord to give it back.'; return; }
-          if (!d || !d.csrf) { drawBubble(ACT[prank.owner].b, prank.owner, 'Log in with Discord and you can give it back to me.', false); ACT[prank.owner].b.sp.visible = true; ACT[prank.owner].b.until = elapsed + 4; return; }
+          if (!d || !d.csrf) { drawBubble(ACT[prank.owner].b, prank.owner, 'Log in with Discord and you can give it back to me.', false); ACT[prank.owner].b.sp.visible = true; ACT[prank.owner].b.until = elapsed + 4; onAirLine(prank.owner,'Log in with Discord and you can give it back to me.'); return; }
           return fetch(ISOCORE_ASSET_BASE + 'api/unavailable', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': d.csrf }, body: '{}' }).then(function (r) { return r.json(); }).then(function (v) { if (v && v.ok !== false) { if (world.extra) world.extra.prank = false; returnPrank(true); } else clearPrank(); });
         }).catch(function () {});
         return;
@@ -4652,7 +4668,7 @@
             closeNote(); var a = ACT[w]; if (gift) { a.anger = 0; a.angry = false; }
             if (freeOn()) { if (status) status.textContent = (gift ? 'Your gift went to ' : 'Your note went to ') + (w === 'ghost' ? 'Ghost' : 'Echo') + '.'; return; }
             var line = gift ? (w === 'ghost' ? 'For me? ...Thank you. I\'ll keep it safe.' : 'A gift! You\'re officially my favourite.') : (w === 'ghost' ? 'Got it. I\'ll read it when the arena\'s quiet, and write back.' : 'Noted! I\'ll read it between laps and write back.');
-            a.lastSay = elapsed; drawBubble(a.b, w, line, false); a.b.sp.visible = true; a.b.until = elapsed + 5; a.mouth = a.b.until; a.lastLine = line; wake();
+            a.lastSay = elapsed; drawBubble(a.b, w, line, false); a.b.sp.visible = true; a.b.until = elapsed + 5; a.mouth = a.b.until; a.lastLine = line; onAirLine(w,line); wake();
           });
         });
         if (!STICKS) { try { ta.focus(); } catch (e) {} }
@@ -4825,7 +4841,7 @@
       }
       if (t < chat.at) return;
       var l = chat.lines[chat.n++]; if (!l) { chat = null; nextChat = t + 70 + Math.random() * 80; return; }
-      var a = ACT[l[0]]; var text = sFill(l[1]); a.lastSay = t; drawBubble(a.b, a.who, text, a.angry); a.b.sp.visible = true; a.b.until = t + 4.6; a.mouth = a.b.until; a.lastLine = text;
+      var a = ACT[l[0]]; var text = sFill(l[1]); a.lastSay = t; drawBubble(a.b, a.who, text, a.angry); a.b.sp.visible = true; a.b.until = t + 4.6; a.mouth = a.b.until; a.lastLine = text; onAirLine(a.who,text);
       chat.at = t + 5;
     }
 
