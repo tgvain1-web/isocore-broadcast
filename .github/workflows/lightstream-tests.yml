@@ -1,0 +1,30 @@
+name: Lightstream overlay checks
+on:
+  pull_request:
+    paths:
+      - 'public/lightstream.html'
+      - 'public/assets/lightstream*'
+      - 'public/assets/bridge.js'
+      - 'public/assets/ig-ghost-world-xsolla.js'
+      - 'tests/lightstream.test.mjs'
+      - '.github/workflows/lightstream-tests.yml'
+  push:
+    branches:
+      - feature/lightstream-transparent-overlay
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate overlay scripts
+        run: |
+          node --check public/assets/bridge.js
+          node --check public/assets/ig-ghost-world-xsolla.js
+          node --check public/assets/lightstream-dialogue.js
+      - name: Run Lightstream overlay unit tests
+        run: node --test tests/lightstream.test.mjs
