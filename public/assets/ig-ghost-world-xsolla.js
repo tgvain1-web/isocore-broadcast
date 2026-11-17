@@ -3342,6 +3342,26 @@
         addModel(root); var so = [c[2], 0, 1.1, 1.3, c[3]]; so.keep = 1; SOLIDS.push(so);
         var dir = c[3] > 0 ? 1 : -1;      // the chair side points to the middle of the stage
         SUITES[c[0]] = { root: root, cv: cv, tx: tx, scr: scr, back: 0, side: c[6], seat: [c[2] + dir * c[4], c[5] + y, 0], yaw: dir > 0 ? -Math.PI / 2 : Math.PI / 2 };
+        // Attach the Streamer Cam virtually just above the MAIN monitor bezel.
+        // Use the loaded screen mesh's actual world-space bounds, not guessed arena coordinates.
+        // A small offset toward the host avoids filming through the screen itself.
+        var mainScreen = (scr.stream || scr.live || scr.chat || {}).mesh;
+        if (mainScreen) {
+          root.updateMatrixWorld(true);
+          var screenBox = new T.Box3().setFromObject(mainScreen);
+          if (!screenBox.isEmpty()) {
+            var screenCentre = screenBox.getCenter(new T.Vector3());
+            var seatedAt = SUITES[c[0]].seat;
+            var towardHost = new T.Vector3(seatedAt[0] - screenCentre.x, 0, seatedAt[2] - screenCentre.z);
+            if (towardHost.lengthSq() < .0025) {
+              towardHost.set(-Math.sin(SUITES[c[0]].yaw), 0, Math.cos(SUITES[c[0]].yaw));
+            }
+            towardHost.normalize();
+            var lens = screenCentre.clone().addScaledVector(towardHost, .28);
+            lens.y = screenBox.max.y + .22;
+            SUITES[c[0]].monitorCam = [lens.x, lens.y, lens.z];
+          }
+        }
         // Soft camera-side key on the host, aimed at the seated character rather than the floor.
         // The previously removed bright white stadium spots and point-fill lights stay removed.
         var seat = SUITES[c[0]].seat, yaw = SUITES[c[0]].yaw;
@@ -3496,6 +3516,12 @@
       if (!SUITES) return null; var su = SUITES[inSuite]; if (!su) return null;
       var dx = Math.sin(su.yaw), dz = -Math.cos(su.yaw), px = -dz, pz = dx, e = su.seat, R = su.root.position;
       if (name === 'first') {
+        // Monitor-top streamer camera, facing the seated host.
+        // Its position comes from the main screen mesh measured during rig placement.
+        // Retain the older angle as fallback if a monitor model has not loaded.
+        if (su.monitorCam) {
+          return [su.monitorCam.slice(), [e[0], e[1] + .60, e[2]]];
+        }
         // STREAMER CAM: camera is placed beyond the rig's monitor array,
         // looking BACK towards the occupied chair. An offset to the side and
         // a raised lens keep screen backs in the foreground without hiding
