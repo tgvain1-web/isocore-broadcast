@@ -43,7 +43,7 @@ async function getTug(db){return (await db.prepare('SELECT * FROM tug WHERE id=1
 async function getSocial(db){
   const [rows,lines]=await Promise.all([
     db.prepare('SELECT side, COUNT(*) AS total FROM ai_followers GROUP BY side').all(),
-    db.prepare('SELECT id,who,text,kind,at FROM ai_dialogue WHERE kind<>'bot' ORDER BY id DESC LIMIT 8').all()
+    db.prepare("SELECT id,who,text,kind,at FROM ai_dialogue WHERE kind <> 'bot' ORDER BY id DESC LIMIT 8").all()
   ]);
   return {followers:publicCounts(rows.results),dialogue:(lines.results||[]).reverse()};
 }
