@@ -11,14 +11,51 @@
 <button id="clearGame" type="button">Clear override / Automatic mode</button>
 <div class="status" id="gameStatus">Game context not loaded.</div>
 </fieldset>
+<fieldset><legend>Ghost &amp; Echo — Twitch chat replies</legend>
+<p>Viewers can ask <code>!askghost question</code> or <code>!askecho question</code>. Replies show beneath Streamer Cam and in Twitch chat as GHOST // or ECHO //. This uses your authorised Twitch account to post; it does not create separate bot accounts.</p>
+<p>**Twitch connection stays OFF until you explicitly enable it.** Twitch and Workers AI may have usage limits or costs.</p>
+<div class="status" id="chatStatus">Chat replies are off. Enter your owner token to check setup.</div>
+<button id="chatConnect" type="button">Connect Twitch account securely</button>
+<div class="row"><button id="chatSubscribe" type="button">Retry chat subscription</button><button id="chatRefresh" type="button">Check connection</button></div>
+<div class="row"><button id="chatEnable" type="button">Enable chat replies</button><button id="chatDisable" type="button">Disable chat replies</button></div>
+<p>The Connect button opens Twitch OAuth. Credentials stay server-side. If chat is unavailable, normal game commentary continues.</p>
+</fieldset>
 <fieldset><legend>Live overlay controls</legend><label for="alert">CORE alert</label><input id="alert" maxlength="160" placeholder="Broadcast announcement"><button id="announce">Send alert</button><div class="row"><button id="ghostVote">Test Ghost vote</button><button id="echoVote">Test Echo vote</button></div><button id="reset">Reset voting meter</button><p>Test votes are owner-only. Live Twitch votes require a verified Twitch EventSub subscription.</p></fieldset>
 <div class="status" id="status">Not connected.</div><p><a href="/preview.html" target="_blank">Open full-size arena preview</a> · <a href="/lightstream.html?debug=1" target="_blank">Preview transparent Lightstream overlay</a> · <a href="/xsolla-setup.html" target="_blank">Generate Xsolla code</a></p>
 <script>
 const $=x=>document.getElementById(x);let token='';async function call(path,method='GET',body=null){const r=await fetch(path,{method,cache:'no-store',headers:{...(method==='POST'?{'content-type':'application/json'}:{}),...(token?{'authorization':'Bearer '+token}:{})},body:body?JSON.stringify(body):undefined});let j=await r.json();if(!r.ok)throw Error(j.error||'HTTP '+r.status);return j}
 function status(t){$('status').textContent=t}
 async function load(){try{const d=await call('/api/state');$('who').value=d.camera.who;$('shot').value=d.camera.shot;status('API connected. Camera: '+d.camera.who+' / '+d.camera.shot+'\nTug: '+d.tug.v+'%\nTwitch EventSub not configured until you subscribe.') }catch(e){status(e.message)}}
-$('connect').onclick=()=>{token=$('tok').value.trim();load()};
+$('connect').onclick=()=>{token=$('tok').value.trim();load();loadChat()};
 async function submit(url,data){try{if(!token)throw Error('Enter your private token before making changes.');let j=await call(url,'POST',data);status('Saved: '+JSON.stringify(j));}catch(e){status('ERROR: '+e.message)}}
+async function loadChat(){
+  if(!token){$('chatStatus').textContent='Enter owner token to check Twitch reply configuration.';return}
+  try{
+    const v=await call('/api/chat/status');
+    const cfg=v.config||{};
+    const missing=Object.keys(cfg).filter(k=>!cfg[k]).join(', ');
+    $('chatStatus').textContent='Twitch: '+(v.connected?'Connected as '+v.channel:'Not connected')+
+      '\nEventSub: '+(v.subscribed?'Subscribed':'Not subscribed')+
+      '\nReplies: '+(v.enabled?'ENABLED':'OFF')+
+      '\nServices missing: '+(missing||'none');
+  }catch(e){$('chatStatus').textContent='Chat status: '+e.message}
+}
+async function chatAction(path){
+  if(!token){$('chatStatus').textContent='Enter owner token first.';return}
+  try{
+    const r=await call(path,'POST',{});
+    if(!r.ok)throw Error(r.error||'Action failed');
+    if(path==='/api/chat/connect'&&r.authorization_url){
+      location.assign(r.authorization_url);return;
+    }
+    await loadChat();
+  }catch(e){$('chatStatus').textContent='ERROR: '+e.message}
+}
+$('chatConnect').onclick=()=>chatAction('/api/chat/connect');
+$('chatSubscribe').onclick=()=>chatAction('/api/chat/subscribe');
+$('chatRefresh').onclick=loadChat;
+$('chatEnable').onclick=()=>chatAction('/api/chat/enable');
+$('chatDisable').onclick=()=>chatAction('/api/chat/disable');
 async function loadGame(){
   try{
     const v=await call('/api/stream-context');
