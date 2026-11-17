@@ -154,7 +154,8 @@ async function twitchHook(request,env){
         written=true;
       }
     }
-    text='@'+nick+' '+(result.changed?'now follows':'already follows')+' '+side.toUpperCase()+' in Isocore. Ghost '+counts.ghost+' | Echo '+counts.echo+'.';
+    // Repeating a follow command is idempotent; avoid chat bot acknowledgement spam.
+    text=result.changed?'@'+nick+' now follows '+side.toUpperCase()+' in Isocore. Ghost '+counts.ghost+' | Echo '+counts.echo+'.':'';
   }else{
     const recent=await env.DB.prepare('SELECT who,at FROM ai_dialogue WHERE kind=? ORDER BY at DESC LIMIT 1').bind('chat').first();
     const same=await env.DB.prepare('SELECT at FROM ai_dialogue WHERE kind=? AND chatter_id=? ORDER BY at DESC LIMIT 1').bind('chat',chatter).first();
