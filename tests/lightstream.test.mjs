@@ -9,6 +9,8 @@ const css=read('public/assets/lightstream.css');
 const captions=read('public/assets/lightstream-dialogue.js');
 const engine=read('public/assets/ig-ghost-world-xsolla.js');
 const xsolla=read('public/xsolla/03-JAVASCRIPT.txt');
+const xsollaCSS=read('public/xsolla/02-CSS.txt');
+const xsollaHTML=read('public/xsolla/01-HTML.txt');
 
 test('The live overlay is a separate transparent page with no preview chrome',()=>{
   assert.match(html,/<main id="isocore-broadcast"/);
@@ -32,10 +34,13 @@ test('The caption handler is loaded before bridge, and code parses',()=>{
 
 test('Xsolla Free path receives the same on-air layout and camera captions',()=>{
   assert.ok(xsolla.includes("classList.add('isocore-lightstream')"));
-  assert.ok(xsolla.includes('assets/lightstream.css'));
+  assert.match(xsollaCSS,/background:transparent!important/);
+  assert.match(xsollaCSS,/iso-stream-subtitle/);
+  assert.match(xsollaHTML,/id="isocore-broadcast"/);
   assert.ok(xsolla.indexOf("load('lightstream-dialogue.js')") < xsolla.indexOf("load('bridge.js')"));
   assert.ok(engine.includes("document.body.classList.contains('isocore-lightstream')"));
   assert.doesNotThrow(()=>new Function(xsolla));
+  assert.doesNotMatch(xsolla,/(CONTROL_TOKEN|TWITCH_BOT_ACCESS_TOKEN|TELEMETRY_TOKEN)/);
 });
 
 test('Ghost and Echo spoken lines appear within the camera and are plain text',()=>{
