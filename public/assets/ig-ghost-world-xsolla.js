@@ -3311,6 +3311,47 @@
       still(); wake();
     }
     function leaveBooth() { inBooth = false; myDesk = -1; figsShow(); glassShow(true); stage.classList.remove('igw-in-booth'); seated(false); seatY = 0; seatHome = null; player.x = START.x; player.z = START.z; pyaw = START.yaw; ppitch = START.pitch; still(); wake(); }
+    // ISOCORE // RIG-ONLY UPLIGHTS. These are *virtual* base-mounted key lights:
+    // gently brighten ONLY workstation materials, never Ghost/Echo or the stage.
+    // Standard WebGL scene spotlights cannot reliably isolate the characters;
+    // material-specific uplighting avoids any new scene Light objects and glare.
+    function rigOnlyUplights(root, who) {
+      root.updateMatrixWorld(true);
+      // Two virtual upward-facing fixtures beneath the outside edges of each rig.
+      // There are no visible light bulbs or props to enter the camera frame.
+      var lampA = root.localToWorld(new T.Vector3(-.60, .10, .12));
+      var lampB = root.localToWorld(new T.Vector3( .60, .10, .12));
+      var tint = new T.Color(who === 'ghost' ? 0x55baff : 0xffa45c);
+      root.traverse(function (o) {
+        if (!o.isMesh || !/^(Structure|Steel|Carbon|Fabric|Upholstery|Rubber)$/.test(o.name || '')) return;
+        var old = o.material;
+        if (!old || !old.isMeshStandardMaterial) return;
+        // Clone per rig: the loaded GLB's shared materials must remain untouched.
+        var mat = old.clone(), oldCompile = mat.onBeforeCompile;
+        mat.onBeforeCompile = function (shader, glRenderer) {
+          if (typeof oldCompile === 'function') oldCompile.call(mat, shader, glRenderer);
+          if (shader.vertexShader.indexOf('#include <worldpos_vertex>') < 0 ||
+              shader.fragmentShader.indexOf('#include <emissivemap_fragment>') < 0) return;
+          shader.uniforms.uRigLampA = { value: lampA };
+          shader.uniforms.uRigLampB = { value: lampB };
+          shader.uniforms.uRigLampTint = { value: tint };
+          shader.vertexShader = 'varying vec3 vRigUpWorld;\\n' +
+            shader.vertexShader.replace('#include <worldpos_vertex>',
+              '#include <worldpos_vertex>\\nvRigUpWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+          shader.fragmentShader =
+            'varying vec3 vRigUpWorld;\\nuniform vec3 uRigLampA;\\nuniform vec3 uRigLampB;\\nuniform vec3 uRigLampTint;\\n' +
+            shader.fragmentShader.replace('#include <emissivemap_fragment>',
+              '#include <emissivemap_fragment>\\n' +
+              'vec3 rigDa = vRigUpWorld - uRigLampA;\\n' +
+              'vec3 rigDb = vRigUpWorld - uRigLampB;\\n' +
+              'float rigUpA = smoothstep(-0.05, 0.20, rigDa.y) * (1.0 - smoothstep(0.80, 1.85, rigDa.y)) * (1.0 - smoothstep(0.30, 1.20, length(rigDa.xz)));\\n' +
+              'float rigUpB = smoothstep(-0.05, 0.20, rigDb.y) * (1.0 - smoothstep(0.80, 1.85, rigDb.y)) * (1.0 - smoothstep(0.30, 1.20, length(rigDb.xz)));\\n' +
+              'totalEmissiveRadiance += uRigLampTint * min(0.18, 0.14 * (rigUpA + rigUpB));\\n');
+        };
+        mat.name = (old.name || o.name || 'Rig') + '_RigOnlyUplight_' + who;
+        o.material = mat;
+      });
+    }
     function placeSuites() {
       try { plotRoots.forEach(function (g) { g.visible = false; }); } catch (e) {}
       try { fitCharacters(); } catch (e) { modelInfo.chars = { state: 'error', err: String(e).slice(0, 200) }; }
@@ -3346,6 +3387,7 @@
         });
         var cv = (scr.stream || scr.live || {}).cv || document.createElement('canvas'), tx = (scr.stream || scr.live || {}).tx;
         addModel(root); var so = [c[2], 0, 1.1, 1.3, c[3]]; so.keep = 1; SOLIDS.push(so);
+        rigOnlyUplights(root, c[0]);
         var dir = c[3] > 0 ? 1 : -1;      // the chair side points to the middle of the stage
         SUITES[c[0]] = { root: root, cv: cv, tx: tx, scr: scr, back: 0, side: c[6], seat: [c[2] + dir * c[4], c[5] + y, 0], yaw: dir > 0 ? -Math.PI / 2 : Math.PI / 2 };
         if (c[0] === 'echo') {
