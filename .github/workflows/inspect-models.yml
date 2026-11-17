@@ -32,13 +32,4 @@ jobs:
                   print('ANIM_TARGETS',[[nodes[ch.get('target',{}).get('node',0)].get('name','') for ch in a.get('channels',[])[:25]] for a in doc.get('animations',[])[:5]])
               else:
                   print('RIG_NODES',[(i,n.get('name'),n.get('translation')) for i,n in enumerate(nodes) if any(t in n.get('name','').lower() for t in ('seat','chair','cockpit','wheel','driver','pedal','rig'))][:60])
-                  print('ALL_RIG_NODES',[(i,n.get('name'),n.get('translation'),n.get('rotation'),n.get('scale'),n.get('mesh'),n.get('children')) for i,n in enumerate(nodes)])
-                  for i,mesh in enumerate(doc.get('meshes',[])):
-                      entries=[]
-                      for prim in mesh.get('primitives',[]):
-                          ix=prim.get('attributes',{}).get('POSITION')
-                          if ix is None: continue
-                          acc=doc['accessors'][ix]
-                          entries.append({'min':acc.get('min'),'max':acc.get('max')})
-                      print('MESH_BOUNDS',i,mesh.get('name'),entries)
           PY
