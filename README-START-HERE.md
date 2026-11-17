@@ -39,27 +39,27 @@ The original PHP overlay counted unauthenticated Twitch IRC votes in the browser
 Until configured, the original `!ghost`/`!echo` prompt will be visible, the owner can test votes from the control panel, but **public Twitch chat votes will not update D1**. The original site's key-hunt/first-finds data is **not migrated**: `/api/ghost.keys` explicitly reports unavailable rather than inventing a result. The arena's historical member/stream data is intentionally blank in the Cloudflare static preview; the original site is untouched.
 
 
-## Lightstream Studio: transparent 3D browser-source overlay
+## Lightstream Studio through your existing Xsolla Code overlay
 
-The stable branch contains a **separate on-air page** at `/lightstream.html`. It is not the `/preview.html` page, which intentionally uses a dark preview background and visible owner controls.
+**Use the existing three-tab Xsolla Code editor (HTML, CSS, JavaScript).** Do **not** replace the Xsolla integration with a second direct browser URL if the current Xsolla source already works.
 
-Once this branch is merged **and Cloudflare deploys it**, the intended URL is:
+1. Once this branch is published to Cloudflare, open `https://isocore-broadcast.tgvain1.workers.dev/xsolla-setup.html` (use your **actual deployed** Worker hostname if different).
+2. Click **Copy HTML**, paste it into Xsolla's **HTML** tab.
+3. Click **Copy CSS**, paste it into the **CSS** tab. This includes the full transparent/compact right-side camera presentation and local camera subtitles; it does not show a dark preview background.
+4. Click **Copy JavaScript**, paste it into the **JavaScript** tab, **without** `<script>` tags. The generator substitutes the correct Worker base URL. Do not use the raw GitHub JS placeholder without substitution.
+5. Save/publish the Xsolla overlay in your existing Xsolla account. In Lightstream, select that published Xsolla overlay above the **PS5 Game Source**. Keep your gameplay source in place.
+6. Test the stream preview and check that the game remains visible behind Ghost/Echo's picture-in-picture camera. Use the owner controls at `/control.html` to switch characters/angles.
 
-`https://isocore-broadcast.tgvain1.workers.dev/lightstream.html`
+The HTML and CSS are deliberately in their corresponding tabs, not injected as a giant JavaScript page. Only the existing 3D engine, models, bridge and dialogue handler are loaded over HTTPS from your separate Isocore Broadcast Cloudflare Worker.
 
-Set your Lightstream project to the normal **Game Source** for the PS5 and put the Isocore overlay layer **above** the gameplay. In Lightstream Studio, add a custom URL Overlay from the Produce area, or Add Layer > 3rd Party Integrations > Browser Source (features depend on the account's plan). Paste the exact HTTPS URL, preserve the 16:9 source and allow it to fill the stage at up to 1920x1080.
+- Default: compact Ghost/Echo camera at the upper right, with gameplay visible.
+- The CSS tab directly owns the on-air camera size and coordinates.
+- Camera subtitles reflect the actual scripted dialogue from Ghost/Echo and appear inside their camera feed.
+- The Lightstream-specific core-model fast path loads 6 essential 3D models rather than the entire arena catalogue. A full-model diagnostic path remains available.
+- There is also an **optional** standalone `/lightstream.html` for plans supporting custom browser-source URLs, but you do **not** need this with the Xsolla three-tab workflow.
+- The unfinished D1 follower/telemetry branch is separate. No `0002` database migration, OAuth credentials, remote streaming relay, PC, OBS, or paid Lightstream browser URL is required for this presentation-only change.
 
-**Plan note:** Lightstream's official guidance says custom URL overlays are Premium-only, while Xsolla Partner Network overlays may be available on Free. If your plan doesn't offer a custom URL, continue using your already published Xsolla overlay URL with Lightstream's **Xsolla Partner Network** browser-source integration. You don't need a PC or OBS for this composition.
-
-- Default page: compact Ghost/Echo camera in the top-right, preserving gameplay visibility.
-- `/lightstream.html?layout=large`: legacy large camera on the left.
-- `/lightstream.html?debug=1`: show API/WebGL diagnostics while previewing (never use the debug URL on stream).
-- `/lightstream.html?models=all`: full model list for diagnostics if the six core model optimization cannot build the scene.
-- The on-air page suppresses camera loading logos, on-screen preview controls and the dark preview backdrop. If WebGL is denied by Lightstream/Xsolla, the 3D camera still needs compatibility testing; the player cannot create a browser WebGL context on a console directly.
-- Subtitles are drawn inside the camera when Ghost or Echo produce a dialogue line; the original overlay artwork, team meter, owner-controlled camera and verified EventSub vote policy are retained.
-- The dedicated on-air page does **not** depend on `migrations/0002` or the unfinished AI follower/telemetry development branch.
-
-Do not paste `CONTROL_TOKEN`, Twitch OAuth secrets or SimHub telemetry tokens into Lightstream or Xsolla. Keep owner controls at `/control.html`.
+Never enter `CONTROL_TOKEN`, Twitch OAuth tokens or SimHub credentials into the public Xsolla Code layer. WebGL in Xsolla and Lightstream still needs a real preview test before treating it as broadcast-ready.
 
 ## What this does not do
 
