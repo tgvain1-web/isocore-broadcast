@@ -2,6 +2,7 @@
  * Public reads are cross-origin. All privileged writes require a bearer secret or a
  * Twitch-signed EventSub message. No stream keys, Discord credentials or OAuth secrets in source.
  */
+import {chatStatus,startChatOAuth,finishChatOAuth,chatOwnerAction,chatLatest,maybeAnswerChat,revokeChatSubscription} from './chat-bot.mjs';
 const SHOTS = new Set(['first', 'shoulder', 'side', 'wide', 'high']);
 const WHO = new Set(['ghost','echo']);
 const publicHeaders = {
@@ -69,7 +70,7 @@ export async function verifyTwitch(req,raw,secret){
   const signed=await crypto.subtle.sign('HMAC',key,new TextEncoder().encode(id+stamp+raw));
   return safeEqual(signature,'sha256='+hex(signed));
 }
-async function twitchHook(request,env){
+async function twitchHook(request,env,ctx){
   if(request.method!=='POST')return fail('Method not allowed',405);
   if(!env.TWITCH_EVENTSUB_SECRET)return fail('Twitch webhook not configured',503);
   const raw=await request.text();if(raw.length>131072)return fail('Payload too large',413);
@@ -77,17 +78,26 @@ async function twitchHook(request,env){
   let data;try{data=JSON.parse(raw);}catch{return fail('Invalid JSON');}
   const typ=request.headers.get('twitch-eventsub-message-type')||'';
   if(typ==='webhook_callback_verification')return new Response(String(data.challenge||''),{headers:{'content-type':'text/plain;charset=utf-8',...publicHeaders}});
-  if(typ==='revocation')return answer({ok:true,revoked:true});
+  if(typ==='revocation'){
+    if(data.subscription?.type==='channel.chat.message'&&env.DB)
+      await revokeChatSubscription(env.DB);
+    return answer({ok:true,revoked:true});
+  }
   if(typ!=='notification'||data.subscription?.type!=='channel.chat.message')return answer({ok:true,ignored:true});
   const ev=data.event||{};
   if(env.TWITCH_BROADCASTER_ID && String(ev.broadcaster_user_id)!==String(env.TWITCH_BROADCASTER_ID))return fail('Wrong broadcaster',403);
-  const side=parseVote(ev.message?.text);
-  if(!side)return answer({ok:true,vote:false});
+  // Twitch's signed EventSub is the ONLY inbound source for interactive chat.
+  // Voting and replies are independent; questions require !askghost/!askecho.
   const id='evt:'+String(request.headers.get('twitch-eventsub-message-id')||'').replace(/[^\w:-]/g,'').slice(0,150);
+  let reply=false;
+  if(env.DB)reply=await maybeAnswerChat(ev,id,env,env.DB,ctx,getStreamContext);
+  const side=parseVote(ev.message?.text);
+  if(!side)return answer({ok:true,vote:false,chat_reply_queued:reply});
+  if(!env.DB)return fail('Chat vote database unavailable',503);
   const who='tw:'+String(ev.chatter_user_id||'').replace(/[^\d]/g,'').slice(0,50);
   if(who.length<4)return fail('Missing Twitch user ID');
   const accepted=await tally(env.DB,side,id,who);
-  return answer({ok:true,vote:accepted});
+  return answer({ok:true,vote:accepted,chat_reply_queued:reply});
 }
 /* Public read-only live game category for Ghost's broadcast commentary.
  * Twitch Helix uses server-side application credentials. Neither OAuth tokens
@@ -190,6 +200,11 @@ async function api(request,env,path){
   const db=env.DB;
   if(request.method==='GET'){
     if(path==='/api/health')return answer({ok:true,service:'isocore-broadcast',database:'ready'});
+    if(path==='/api/chat/latest')return answer(await chatLatest(db));
+    if(path==='/api/chat/status'){
+      if(!authorized(request,env.CONTROL_TOKEN))return fail('Owner authorization required',403);
+      return answer(await chatStatus(env,db));
+    }
     if(path==='/api/state')return answer(await summary(db));
     if(path==='/api/control'||path==='/api/camera')return answer({ok:true,...await getCamera(db)});
     if(path==='/api/tug.state')return answer({tug:stateOf(await getTug(db)),chat:['igvain']});
@@ -200,6 +215,9 @@ async function api(request,env,path){
   if(request.method!=='POST')return fail('Method not allowed',405);
   if(!authorized(request,env.CONTROL_TOKEN))return fail('Owner authorization required',403);
   let data;try{data=await bodyJSON(request);}catch{return fail('Invalid JSON or oversized payload');}
+  if(path==='/api/chat/connect')return answer(await startChatOAuth(env,db));
+  if(['/api/chat/enable','/api/chat/disable','/api/chat/subscribe'].includes(path))
+    return answer(await chatOwnerAction(path,data,env,db,twitchAppAccessToken));
   if(path==='/api/game'){
     if(typeof data.game!=='string'||data.game.length>100)return fail('Game name must be 100 characters or fewer');
     const game=canonicalGameName(data.game);
@@ -236,12 +254,16 @@ async function api(request,env,path){
   return fail('Unknown endpoint',404);
 }
 export default {
-  async fetch(request,env){
+  async fetch(request,env,ctx){
     const url=new URL(request.url);const path=url.pathname;
+    if(path==='/oauth/twitch/callback'){
+      if(request.method!=='GET'||!env.DB)return fail('OAuth callback unavailable',503);
+      return finishChatOAuth(request,env,env.DB,twitchAppAccessToken);
+    }
     if(!path.startsWith('/api/') && !path.startsWith('/webhooks/')) return env.ASSETS.fetch(request);
     if(request.method==='OPTIONS')return new Response(null,{status:204,headers:publicHeaders});
     try {
-      if(path==='/webhooks/twitch')return await twitchHook(request,env);
+      if(path==='/webhooks/twitch')return await twitchHook(request,env,ctx);
       if(path==='/api/health' && !env.DB)return fail('D1 binding is missing',503);
       return await api(request,env,path);
     }catch(e){return fail('Broadcast service temporarily unavailable',503);}

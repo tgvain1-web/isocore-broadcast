@@ -43,7 +43,7 @@ test('Xsolla Free path receives the same on-air layout and camera captions',()=>
   assert.doesNotThrow(()=>new Function(xsolla));
   assert.ok(!xsolla.includes('REPLACE_WITH_YOUR_DEPLOYED_ISOCORE_BROADCAST_HOST'));
   assert.ok(!xsolla.includes('iso-debug-panel'));
-  assert.ok(xsolla.includes("var VERSION = '18'"));
+  assert.ok(xsolla.includes("var VERSION = '19'"));
   assert.doesNotMatch(xsolla,/(CONTROL_TOKEN|TWITCH_BOT_ACCESS_TOKEN|TELEMETRY_TOKEN)/);
 });
 
@@ -84,7 +84,8 @@ test('Ghost and Echo dialogue appears directly below camera, as plain text',()=>
   assert.equal(caption.dataset.who,'echo');
   assert.equal(caption.children[0].textContent,'ECHO //');
   assert.equal(caption.children[1].textContent,'Tyres and braking points matter.');
-  assert.match(captions,/source!=='game'/);
+  assert.match(captions,/includes\(d\.source\)/);
+  assert.match(captions,/source:'chat'/);
   assert.match(xsollaCSS,/-webkit-line-clamp:2/);
   assert.match(captions,/10\.5\*scale/);
 });
