@@ -20,7 +20,7 @@
       return new Promise(function(resolve,reject){
         var script=document.createElement('script');
         script.src=HOST+'/assets/'+name+'?v='+VERSION;
-        script.crossOrigin='anonymous';
+        // Classic scripts do not need CORS; avoids anonymous-mode failure in Xsolla.
         script.onload=function(){report('Loaded '+name);resolve()};
         script.onerror=function(){reject(Error('FAILED to load '+name+' (not deployed or blocked)'))};
         document.head.appendChild(script);
