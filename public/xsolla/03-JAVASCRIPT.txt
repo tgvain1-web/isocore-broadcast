@@ -1,10 +1,9 @@
-/* ISOCORE BROADCAST — Xsolla JavaScript
-   Clean live edition: no temporary on-screen debug panel.
-   Xsolla CSS controls the 500 x 350 camera and website placement.
+/* ISOCORE BROADCAST — COMPLETE XSOLLA JAVASCRIPT
+   Clean live edition. CSS controls the 500x281 camera.
+   No temporary CAMERA READY panel.
 */
 (function () {
   'use strict';
-
   var HOST = 'https://isocore-broadcast.tgvain1.workers.dev';
   var VERSION = '16';
 
@@ -12,7 +11,7 @@
     return new Promise(function (resolve, reject) {
       var script = document.createElement('script');
       script.src = HOST + '/assets/' + file + '?v=' + VERSION;
-      // Load a normal classic script; do not force CORS mode.
+      // Classic scripts: do not force anonymous CORS mode.
       script.onload = resolve;
       script.onerror = function () {
         reject(new Error('Isocore could not load ' + file));
@@ -24,7 +23,7 @@
   function boot() {
     var root = document.getElementById('isocore-broadcast');
     if (!root) {
-      console.error('[ISOCORE] HTML container not found');
+      console.error('[ISOCORE] HTML container missing');
       return;
     }
     if (root.dataset.xsollaBooted === '1') return;
@@ -35,7 +34,7 @@
       .then(function () { return load('overlay-stage.js'); })
       .then(function () {
         return load('lightstream-dialogue.js').catch(function () {
-          console.warn('[ISOCORE] Optional subtitles unavailable');
+          console.warn('[ISOCORE] Optional captions unavailable');
         });
       })
       .then(function () { return load('bridge.js'); })
