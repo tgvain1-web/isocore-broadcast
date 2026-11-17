@@ -55,6 +55,12 @@
       if(!window.ISOCORE_OVERLAY_HTML)await script('assets/overlay-stage.js');
       // The CSS on the original streaming page and the in-world Three.js CSS are retained.
       css('assets/ig-ghost-world.css');css('assets/broadcast.css');
+      // The standalone preview also gets dialogue captions below its camera.
+      // Xsolla preloads the same file; avoid duplicate event listeners.
+      if(!window.__isocoreDialogueLoaded){
+        try{await script('assets/lightstream-dialogue.js');}
+        catch(e){console.warn('[ISOCORE] Optional dialogue captions unavailable',e);}
+      }
       $('igwHomeSlot').innerHTML=window.ISOCORE_BROADCAST_STAGE;
       $('iso-overlay-shell').innerHTML=window.ISOCORE_OVERLAY_HTML;scaleOverlay();
       if(!$('ig-ghost-world'))throw Error('Original arena stage was not created');
