@@ -1,4 +1,2 @@
-<!-- ISOCORE BROADCAST: Xsolla Code / HTML tab. No iframe or visible intro. -->
-<div id="isocore-broadcast" aria-label="Isocore live PS5 overlay" role="presentation">
-  <div id="iso-diag" class="isocore-setup-diag" role="status">ISOCORE // overlay connecting</div>
-</div>
+<!-- ISOCORE BROADCAST — Xsolla HTML tab -->
+<div id="isocore-broadcast" aria-label="Isocore live PS5 broadcast overlay"></div>
