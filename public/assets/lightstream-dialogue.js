@@ -52,4 +52,86 @@
     }
   });
   mount();
+
+  // Launch-night Ghost commentary: uses Twitch's actual stream game category
+  // (or the owner's explicit game override), NOT unseen gameplay events.
+  // This is game-aware scripted commentary, not video analysis or AI inference.
+  var gameContext=null,commentIndex=0,lastComment=0,lastGame='';
+  var gameTemplates={
+    gta:[
+      'Vice City has plenty of ways to make a bad decision look tempting. What is the plan tonight?',
+      'If a police chase starts, having an escape route is usually smarter than hoping for a miracle.',
+      'Driving fast is easy. Getting away clean is the challenge.',
+      'Chat, are we going for the main story or getting distracted by the open world?',
+      'Grand Theft Auto VI tonight. I want to see how much trouble this city can throw at us.',
+      'Vehicles, missions, and a city full of distractions. I have a feeling this could get chaotic.'
+    ],
+    gt7:[
+      'Gran Turismo 7 rewards consistency. A clean lap often beats an overambitious one.',
+      'Tyre life and fuel strategy matter just as much as raw speed.',
+      'Echo will be watching the racing line. I will be watching for risky decisions.',
+      'Chat, would you push now or save the tyres for later?'
+    ],
+    cod:[
+      'Call of Duty tonight. Positioning and awareness are as important as aiming.',
+      'One good rotation can change an entire round. Keep the objectives in mind.',
+      'Chat, do you play aggressively or hold angles and let opponents make the mistake?',
+      'The scoreboard matters, but the teamwork behind it matters more.'
+    ],
+    nms:[
+      'No Man’s Sky is all about discovering what is beyond the next jump.',
+      'Resource planning makes the difference between a smooth expedition and a long walk home.',
+      'Chat, what would you explore first: a new planet or a derelict freighter?',
+      'Exploration is better when you still have enough fuel to make it back.'
+    ],
+    generic:[
+      'We are playing {game}. Chat, what should we focus on first?',
+      '{game} is on the schedule tonight. Give me your best strategy tips in chat.',
+      'I want to hear what you enjoy most about {game}.',
+      'What is the most satisfying thing to pull off in {game}?'
+    ]
+  };
+  function gameLines(name){
+    var n=name.toLowerCase();
+    if(/grand theft auto|\bgta\s*(?:vi|6)\b|vice city/.test(n))return gameTemplates.gta;
+    if(/gran turismo|\bgt\s*7\b/.test(n))return gameTemplates.gt7;
+    if(/call of duty|\bwarzone\b|\bmodern warfare\b|\bblack ops\b/.test(n))return gameTemplates.cod;
+    if(/no man.s sky/.test(n))return gameTemplates.nms;
+    return gameTemplates.generic;
+  }
+  function commentary(){
+    if(!gameContext||!gameContext.game)return;
+    if(gameContext.source==='twitch' && gameContext.live!==true)return;
+    if(document.hidden)return;
+    var now=Date.now();
+    if(now-lastComment<85000)return;
+    var name=gameContext.game;
+    if(name!==lastGame){commentIndex=0;lastGame=name;}
+    var lines=gameLines(name);
+    var line=lines[commentIndex++ % lines.length].replace(/\{game\}/g,name);
+    lastComment=now;
+    window.dispatchEvent(new CustomEvent('isocore:dialogue',{
+      detail:{who:'ghost',text:line}
+    }));
+  }
+  function getGame(){
+    var url='https://isocore-broadcast.tgvain1.workers.dev/api/stream-context';
+    fetch(url,{cache:'no-store',credentials:'omit'})
+      .then(function(res){return res.ok?res.json():null;})
+      .then(function(info){
+        if(!info||!info.ok||!info.game){gameContext=null;return;}
+        var was=gameContext && gameContext.game;
+        gameContext=info;
+        if(info.game!==was)lastComment=0;
+        commentary();
+      })
+      .catch(function(){ /* Missing credentials/network: no fictitious game lines. */ });
+  }
+  if(document.body.classList.contains('isocore-lightstream')||
+     document.body.classList.contains('isocore-preview')){
+    // Defer initial lookup until the 3D engine can mount the camera.
+    setTimeout(getGame,9000);
+    setInterval(getGame,60000);
+    setInterval(commentary,15000);
+  }
 })();
