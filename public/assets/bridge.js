@@ -11,7 +11,7 @@
   const HOST = new URL('../',document.currentScript && document.currentScript.src || location.href).href;
   const $ = id => document.getElementById(id);
   let who='ghost',shot='first',ready=false,apiOK=false,booted=false;
-  ROOT.innerHTML = '<div id="iso-camera" class="ghost"><div id="igwHomeSlot"></div><div id="iso-camera-label">GHOST // FIRST CAMERA</div></div><div id="iso-overlay-shell"></div><div id="iso-diag">ISOCORE // HTML ACTIVE · CONNECTING</div>';
+  ROOT.innerHTML = '<div id="iso-camera" class="ghost"><div id="igwHomeSlot"></div><div id="iso-camera-label">GHOST // STREAMER CAM</div></div><div id="iso-overlay-shell"></div><div id="iso-diag">ISOCORE // HTML ACTIVE · CONNECTING</div>';
   const diag=$('iso-diag');
   function scaleOverlay(){
     const el=$('iso-overlay-shell');if(!el)return;
@@ -27,10 +27,10 @@
   scaleOverlay();
   function status(message,error){diag.textContent=message;diag.classList.toggle('error',!!error);diag.hidden=false;}
   function script(path){return new Promise((resolve,reject)=>{
-    const s=document.createElement('script');s.src=HOST+path+'?v=11';s.crossOrigin='anonymous';
+    const s=document.createElement('script');s.src=HOST+path+'?v=17';s.crossOrigin='anonymous';
     s.onload=resolve;s.onerror=()=>reject(Error('External script blocked: '+path));document.head.appendChild(s);
   });}
-  function css(path){const l=document.createElement('link');l.rel='stylesheet';l.href=HOST+path+'?v=11';document.head.appendChild(l);}
+  function css(path){const l=document.createElement('link');l.rel='stylesheet';l.href=HOST+path+'?v=17';document.head.appendChild(l);}
   async function getState(){
     try{
       const resp=await fetch(HOST+'api/state',{cache:'no-store',credentials:'omit'});
@@ -38,7 +38,7 @@
       const value=await resp.json();apiOK=true;
       const c=value.camera||{};who=c.who==='echo'?'echo':'ghost';shot=['first','shoulder','side','wide','high'].includes(c.shot)?c.shot:'first';
       $('iso-camera').className=who;
-      $('iso-camera-label').textContent=who.toUpperCase()+' // '+(shot==='high'?'JUMBOTRON':shot.toUpperCase())+' CAMERA';
+      $('iso-camera-label').textContent=who.toUpperCase()+' // '+(shot==='first'?'STREAMER CAM':shot==='high'?'JUMBOTRON CAMERA':shot.toUpperCase()+' CAMERA');
       const st=$('ig-ghost-world');const engine=st&&st._igw;
       if(engine&&typeof engine.broadcast==='function'){
         if(engine.broadcast(who,shot)){
@@ -55,6 +55,12 @@
       if(!window.ISOCORE_OVERLAY_HTML)await script('assets/overlay-stage.js');
       // The CSS on the original streaming page and the in-world Three.js CSS are retained.
       css('assets/ig-ghost-world.css');css('assets/broadcast.css');
+      // The standalone preview also gets dialogue captions below its camera.
+      // Xsolla preloads the same file; avoid duplicate event listeners.
+      if(!window.__isocoreDialogueLoaded){
+        try{await script('assets/lightstream-dialogue.js');}
+        catch(e){console.warn('[ISOCORE] Optional dialogue captions unavailable',e);}
+      }
       $('igwHomeSlot').innerHTML=window.ISOCORE_BROADCAST_STAGE;
       $('iso-overlay-shell').innerHTML=window.ISOCORE_OVERLAY_HTML;scaleOverlay();
       if(!$('ig-ghost-world'))throw Error('Original arena stage was not created');

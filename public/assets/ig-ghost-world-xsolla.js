@@ -1311,8 +1311,11 @@
     function cameraPosition() {
       if (filmCam) { camera.position.set(filmCam[0], filmCam[1], filmCam[2]); camera.lookAt(filmCam[3], filmCam[4], filmCam[5]); try { ['ghost', 'echo'].forEach(function (w) { if (ACT[w] && ACT[w].b && ACT[w].b.sp) ACT[w].b.sp.visible = false; }); spirit.rotation.y = Math.atan2(camera.position.x - currentPos.x, camera.position.z - currentPos.z); echoSpirit.rotation.y = Math.atan2(camera.position.x - echoPos.x, camera.position.z - echoPos.z); } catch (e) {} return; }
       if (inSuite) { var shot = shotOf(camShot); if (shot) {
-        // first person: wide enough to take in all three rig screens, even on a phone held upright (about 100 degrees across)
-        var wantFov = camShot === 'first' ? Math.min(105, Math.max(60, 2 * Math.atan(Math.tan(50 * Math.PI / 180) / Math.max(.3, camera.aspect)) * 180 / Math.PI)) : (camShot === 'side' ? (camera.aspect < .9 ? 63 : 49) : (camera.aspect < .9 ? 70 : 55));
+        // Streamer Cam now looks BACK at the seated host from the far side of
+        // the screens. Keep both character models visible for every shot.
+        if (suiteHid.ghost) { spirit.visible = true; suiteHid.ghost = false; }
+        if (suiteHid.echo) { echoSpirit.visible = true; suiteHid.echo = false; }
+        var wantFov = camShot === 'first' ? (camera.aspect < .9 ? 65 : 53) : (camShot === 'side' ? (camera.aspect < .9 ? 63 : 49) : (camera.aspect < .9 ? 70 : 55));
         if (Math.abs(camera.fov - wantFov) > .5) { camera.fov = wantFov; camera.updateProjectionMatrix(); }
         camera.position.set(shot[0][0], shot[0][1], shot[0][2]); camera.lookAt(shot[1][0], shot[1][1], shot[1][2]); return; } }
       if (mode === 'walk') { var cq = Math.cos(ppitch), ey = EYE + bob + seatY + standY(); camera.position.set(player.x, ey, player.z); camera.lookAt(player.x + Math.sin(pyaw) * cq, ey + Math.sin(ppitch), player.z - Math.cos(pyaw) * cq); return; }
@@ -1348,7 +1351,7 @@
         blinkers.forEach(function (b, i) { b.visible = Math.sin(elapsed * 2.4 + i) > .55 && !(b.userData.fx && qual === 0); }); fireLights.forEach(function (f, i) { if (f.isLight) f.intensity = 8 + Math.sin(elapsed * 13 + i) * 3; else f.scale.set(1, 1 + Math.sin(elapsed * 11) * .18, 1); }); waters.forEach(function (w) { w.material.opacity = .55 + Math.sin(elapsed * 3) * .15; });
         var pulse = .5 + Math.sin(elapsed * 2.1) * .5, nearGhost = Math.max(0, 1 - Math.hypot(player.x - currentPos.x, player.z - currentPos.z) / 8); halo.material.opacity = .24 + pulse * .14; spark.scale.setScalar(1.0 + pulse * .25 + nearGhost * .12); heart.scale.set(.15 + pulse * .015, .15 + pulse * .015, .1); spinner.rotation.z = elapsed * .22; figure.rotation.z = Math.sin(elapsed * .7 * pace) * .05 * pace; figure.rotation.x = -.1 * nearGhost; clouds.rotation.y = elapsed * .003;
         spirit.rotation.y = filmCam ? Math.atan2(camera.position.x - currentPos.x, camera.position.z - currentPos.z) : (onAir('ghost') && SUITES.ghost && Math.hypot(currentPos.x - SUITES.ghost.seat[0], currentPos.z - SUITES.ghost.seat[2]) < 1.2 ? SUITES.ghost.yaw : lifeFace('ghost', currentPos, elapsed));
-        if (inSuite === 'ghost' && camShot === 'first') { spirit.visible = false; suiteHid.ghost = true; } else if (suiteHid.ghost) { spirit.visible = true; suiteHid.ghost = false; }
+        if (suiteHid.ghost) { spirit.visible = true; suiteHid.ghost = false; }
         shadow.position.set(currentPos.x, .125, currentPos.z); dust.rotation.y = elapsed * .007;
         beacon.material = Math.sin(elapsed * 2.2) > .2 ? mats.light : mats.off;
         slot.material = world.where === 'post' && Math.sin(elapsed * 3) > 0 ? mats.white : mats.warm;
@@ -1839,6 +1842,13 @@
       try { if (ready) resize(); } catch (e) {}
     }
     function present(t) {
+      // Broadcast studio uses an external dialogue caption strip, not floating
+      // 3D speech bubbles that obscure the seated characters / racing rigs.
+      if (SEALED && typeof ACT !== 'undefined' && ACT) {
+        ['ghost','echo'].forEach(function (who) {
+          if (ACT[who] && ACT[who].b && ACT[who].b.sp) ACT[who].b.sp.visible = false;
+        });
+      }
       var now = performance.now();
       // the first few frames compile shaders and are always slow; after that, twelve frames averaging over 50 ms step down
       // one level, and a device managing under 4 frames a second goes straight to the plain town
@@ -2120,7 +2130,7 @@
       if (echoFigure) echoFigure.rotation.x = -.1 * Math.max(0, 1 - Math.hypot(player.x - echoPos.x, player.z - echoPos.z) / 8);
       echoSpirit.position.set(echoPos.x, studioEchoSeat ? studioEchoSeat[1] - 1.02 : .13 + floorAt(echoPos.x, echoPos.z) + Math.sin(t * 1.9 + 1.3) * .11, echoPos.z);
       echoSpirit.rotation.y = filmCam ? Math.atan2(camera.position.x - echoPos.x, camera.position.z - echoPos.z) : (onAir('echo') && SUITES.echo && Math.hypot(echoPos.x - SUITES.echo.seat[0], echoPos.z - SUITES.echo.seat[2]) < 1.2 ? SUITES.echo.yaw : lifeFace('echo', echoPos, t));
-      if (inSuite === 'echo' && camShot === 'first') { echoSpirit.visible = false; suiteHid.echo = true; } else if (suiteHid.echo) { echoSpirit.visible = true; suiteHid.echo = false; }
+      if (suiteHid.echo) { echoSpirit.visible = true; suiteHid.echo = false; }
     }
     (function () { var w = (X.echo && ECHO_AT[X.echo.where]) || ECHO_AT.finish; echoPos.set(w[0], 0, w[1]); echoSpirit.position.set(w[0], .13, w[1]); })();
 
@@ -3495,13 +3505,43 @@
     }
     // ---- Fixed cameras while broadcasting: five framed shots and a row of buttons to cut between them
     var camShot = 'first', camRow = null;
-    var SHOTS = [['first', 'First person'], ['shoulder', 'Over shoulder'], ['side', 'Side on'], ['wide', 'Stage wide'], ['high', 'Jumbotron']];
+    var SHOTS = [['first', 'Streamer cam'], ['shoulder', 'Over shoulder'], ['side', 'Side on'], ['wide', 'Stage wide'], ['high', 'Jumbotron']];
     function shotOf(name) {
       if (!SUITES) return null; var su = SUITES[inSuite]; if (!su) return null;
       var dx = Math.sin(su.yaw), dz = -Math.cos(su.yaw), px = -dz, pz = dx, e = su.seat, R = su.root.position;
-      if (name === 'first') { var bk = su.back || 0; return [[e[0] - dx * bk, e[1] + .06, e[2] - dz * bk], [e[0] + dx * 4, e[1] - .35, e[2] + dz * 4]]; }
-      if (name === 'shoulder') return [[e[0] - dx * 1.5 + px * .45, e[1] + .45, e[2] - dz * 1.5 + pz * .45], [R.x + dx * .6, e[1] - .15, R.z + dz * .6]];
-      if (name === 'side') return [[R.x + px * 2.05 - dx * .3, e[1] + .12, R.z + pz * 2.05 - dz * .3], [R.x + dx * .12, e[1] - .05, R.z + dz * .12]];
+      if (name === 'first') {
+        // STREAMER CAM: camera is placed beyond the rig's monitor array,
+        // looking BACK towards the occupied chair. An offset to the side and
+        // a raised lens keep screen backs in the foreground without hiding
+        // the streamer's upper body or face.
+        var front = 3.65, lateral = 1.65;
+        return [
+          [e[0] + dx * front + px * lateral,
+           e[1] + .78,
+           e[2] + dz * front + pz * lateral],
+          [e[0] - dx * .08, e[1] - .28, e[2] - dz * .08]
+        ];
+      }
+      if (name === 'shoulder') {
+        // A broadcast over-shoulder shot needs breathing room around both cloak
+        // and monitors, not a lens within arm's reach of the avatar.
+        return [[e[0] - dx * 3.65 + px * 1.2, e[1] + .72,
+                 e[2] - dz * 3.65 + pz * 1.2],
+                [e[0] + dx * 1.05, e[1] - .28,
+                 e[2] + dz * 1.05]];
+      }
+      if (name === 'side') {
+        // A studio camera must see the seated host AND their rig. At 2.05m the
+        // cloak was almost touching the lens and blocked half the feed.
+        // Place the camera ~4.6m off the side, slightly behind the cockpit,
+        // and aim between the host's seat and the monitor/wheel assembly.
+        var sideDistance = 5.4, backDistance = 1.8;
+        return [
+          [R.x + px * sideDistance - dx * backDistance, e[1] + .55,
+           R.z + pz * sideDistance - dz * backDistance],
+          [R.x + dx * .33, e[1] - .28, R.z + dz * .33]
+        ];
+      }
       if (name === 'wide') return [[R.x * .25, 5.5, 15], [R.x * .8, 1.6, 0]];
       return [[0, 15.5, 9], [R.x * .55, 1.4, 0]];
     }
@@ -3810,6 +3850,16 @@
       // enter the browser's loading queue first. All original arena content remains.
       var priority = ['arena', 'stage-main', 'station', 'simrig', 'ghost', 'echo'];
       var names = Object.keys(world.models).filter(function (n) { return MODEL_SLOTS[n]; });
+      // In Lightstream's live browser source, fetch only the arena and six things
+      // needed to render both hosts and their rigs. The full interactive world,
+      // original preview and ?models=all keep every model unchanged.
+      var liveOverlay = /\/lightstream\.html$/i.test(location.pathname) || document.body.classList.contains('isocore-lightstream');
+      var allModels = false;
+      try { allModels = new URLSearchParams(location.search).get('models') === 'all'; } catch (e) {}
+      if (liveOverlay && !allModels) {
+        var required = {arena:1,'stage-main':1,station:1,simrig:1,ghost:1,echo:1};
+        names = names.filter(function (n) { return required[n] === 1; });
+      }
       names.sort(function (a,b) { var ai=priority.indexOf(a), bi=priority.indexOf(b); return (ai<0?100:ai)-(bi<0?100:bi); });
       if (!names.length) return;
       // Suppress the in-world loading-logo intro. Keep model progress internal.
@@ -4029,6 +4079,8 @@
       return { sp: sp, cv: cv, tx: tx, until: 0 };
     }
     function drawBubble(b, who, text, hot) {
+      // In the broadcast studio captions are handled outside the WebGL scene.
+      if (SEALED) { b.sp.visible = false; return; }
       var g = b.cv.getContext('2d'), w = 768, h = 200, col = hot ? '#ff3b3b' : who === 'echo' ? '#ff9a4d' : '#4fc8f5';
       g.clearRect(0, 0, w, h); g.font = '600 38px system-ui, -apple-system, Segoe UI, sans-serif';
       var words = text.split(' '), lines = [''], i;
@@ -4048,6 +4100,12 @@
     var echoLight = null, echoHalo = null; echoSpirit.traverse(function (o) { if (o.isLight) echoLight = o; });
     echoSpirit.traverse(function (o) { if (o.isSprite && !echoHalo && o.material && o.material.color && o.material.color.getHSL({}).s > .3) echoHalo = o; });
     var ACT = { ghost: actor('ghost', spirit, currentPos, ghostLight, halo, spinner, figure), echo: actor('echo', echoSpirit, echoPos, echoLight, echoHalo, echoSpinner, echoFigure) };
+    // Broadcast lines become captions immediately UNDER the camera in
+    // both Xsolla/Lightstream and the standalone arena preview.
+    function onAirLine(who,text) {
+      if(!(document.body.classList.contains('isocore-lightstream') || document.body.classList.contains('isocore-preview')) || !text) return;
+      try { window.dispatchEvent(new CustomEvent('isocore:dialogue',{detail:{who:who,text:text}})); } catch(e){}
+    }
     function isOut(who) { var guest = ACT && ACT[who] && ACT[who].guestUntil > elapsed; return who === 'ghost' ? (typeof ghostOut === 'undefined' || ghostOut || guest) : (echoOn && (typeof echoOut === 'undefined' || echoOut || guest)); }
     // Free will (Scout's PC on): nothing scripted is said. They only say the lines they wrote themselves with their last choice:
     // what they said about it, four more things to say while they are at it, and what to say to a member who walks up.
@@ -4063,11 +4121,11 @@
     }
     function speak(a, kind, force) { if (filmPose) return;
       var t = elapsed; if (!force && t - a.lastSay < 7) return;
-      if (freeOn()) { if (!force && t - a.lastSay < 18) return; var own = freeLine(a, kind); if (!own) return; a.lastSay = t; drawBubble(a.b, a.who, own, a.angry); a.b.sp.visible = true; a.b.until = t + Math.max(3.5, own.length * .075); a.mouth = a.b.until; a.lastLine = own; return; }
+      if (freeOn()) { if (!force && t - a.lastSay < 18) return; var own = freeLine(a, kind); if (!own) return; a.lastSay = t; drawBubble(a.b, a.who, own, a.angry); a.b.sp.visible = true; a.b.until = t + Math.max(3.5, own.length * .075); a.mouth = a.b.until; a.lastLine = own; onAirLine(a.who,own); return; }
       var list = LINES[a.who][kind]; if (!list) return; var text = fill(pickOne(list), a.who); a.lastSay = t;
       drawBubble(a.b, a.who, text, a.angry || kind === 'angry'); a.b.sp.visible = true; a.b.until = t + Math.max(3.5, text.length * .075); a.mouth = a.b.until;
       
-      a.lastLine = text;
+      a.lastLine = text; onAirLine(a.who,text);
     }
     function shoutLine(who, text) {
       ticker.textContent = ''; ticker.appendChild(el('b', 'igw-ticker-' + who, who === 'echo' ? 'ECHO' : 'GHOST')); ticker.appendChild(document.createTextNode(' ' + text));
@@ -4209,7 +4267,7 @@
         // talk
         if (a.act === 'visit' && a.visitSay && Math.hypot(a.target[0] - a.pos.x, a.target[1] - a.pos.z) < 2.5) { a.visitSay = false; speak(a, 'visit', true); }
         else if (a.act === 'greet' && a.greetName && pd < 6.5) { a.greetName = false; speak(a, 'greetYou', true); }
-        else if (a.act === 'will' && a.willSay && Math.hypot(a.target[0] - a.pos.x, a.target[1] - a.pos.z) < 2.5 && pd < 24) { var ws = a.willSay; a.willSay = ''; a.lastSay = t; drawBubble(a.b, a.who, ws, a.angry); a.b.sp.visible = true; a.b.until = t + Math.max(4, ws.length * .075); a.mouth = a.b.until; a.lastLine = ws; }
+        else if (a.act === 'will' && a.willSay && Math.hypot(a.target[0] - a.pos.x, a.target[1] - a.pos.z) < 2.5 && pd < 24) { var ws = a.willSay; a.willSay = ''; a.lastSay = t; drawBubble(a.b, a.who, ws, a.angry); a.b.sp.visible = true; a.b.until = t + Math.max(4, ws.length * .075); a.mouth = a.b.until; a.lastLine = ws; onAirLine(a.who,ws); }
         else if (a.act === 'greet' && pd < 6.5 && t - a.lastSay > 9) speak(a, 'greet');
         else if (a.act === 'rival' && a.spread && r.angry && Math.hypot(r.pos.x - a.pos.x, r.pos.z - a.pos.z) < 6 && t - a.lastSay > 6) { speak(a, 'rivalAngry', true); r.anger = Math.max(0, Math.min(1, r.anger + (a.spread === 'calm' ? -.25 : .15))); a.spread = ''; }
         else if (a.act === 'rival' && isOut(r.who) && Math.hypot(r.pos.x - a.pos.x, r.pos.z - a.pos.z) < 6 && t - Math.max(a.lastSay, r.lastSay) > 5) speak(a, 'rival');
@@ -4577,7 +4635,7 @@
       if (prank.key && !local) {                               // the site's prank: give it back for real (members only)
         fetch(ISOCORE_ASSET_BASE + 'api/ghost.mine', { credentials: 'same-origin', cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) {
           if ((!d || !d.csrf) && freeOn()) { if (status) status.textContent = 'Log in with Discord to give it back.'; return; }
-          if (!d || !d.csrf) { drawBubble(ACT[prank.owner].b, prank.owner, 'Log in with Discord and you can give it back to me.', false); ACT[prank.owner].b.sp.visible = true; ACT[prank.owner].b.until = elapsed + 4; return; }
+          if (!d || !d.csrf) { drawBubble(ACT[prank.owner].b, prank.owner, 'Log in with Discord and you can give it back to me.', false); ACT[prank.owner].b.sp.visible = true; ACT[prank.owner].b.until = elapsed + 4; onAirLine(prank.owner,'Log in with Discord and you can give it back to me.'); return; }
           return fetch(ISOCORE_ASSET_BASE + 'api/unavailable', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': d.csrf }, body: '{}' }).then(function (r) { return r.json(); }).then(function (v) { if (v && v.ok !== false) { if (world.extra) world.extra.prank = false; returnPrank(true); } else clearPrank(); });
         }).catch(function () {});
         return;
@@ -4652,7 +4710,7 @@
             closeNote(); var a = ACT[w]; if (gift) { a.anger = 0; a.angry = false; }
             if (freeOn()) { if (status) status.textContent = (gift ? 'Your gift went to ' : 'Your note went to ') + (w === 'ghost' ? 'Ghost' : 'Echo') + '.'; return; }
             var line = gift ? (w === 'ghost' ? 'For me? ...Thank you. I\'ll keep it safe.' : 'A gift! You\'re officially my favourite.') : (w === 'ghost' ? 'Got it. I\'ll read it when the arena\'s quiet, and write back.' : 'Noted! I\'ll read it between laps and write back.');
-            a.lastSay = elapsed; drawBubble(a.b, w, line, false); a.b.sp.visible = true; a.b.until = elapsed + 5; a.mouth = a.b.until; a.lastLine = line; wake();
+            a.lastSay = elapsed; drawBubble(a.b, w, line, false); a.b.sp.visible = true; a.b.until = elapsed + 5; a.mouth = a.b.until; a.lastLine = line; onAirLine(w,line); wake();
           });
         });
         if (!STICKS) { try { ta.focus(); } catch (e) {} }
@@ -4825,7 +4883,7 @@
       }
       if (t < chat.at) return;
       var l = chat.lines[chat.n++]; if (!l) { chat = null; nextChat = t + 70 + Math.random() * 80; return; }
-      var a = ACT[l[0]]; var text = sFill(l[1]); a.lastSay = t; drawBubble(a.b, a.who, text, a.angry); a.b.sp.visible = true; a.b.until = t + 4.6; a.mouth = a.b.until; a.lastLine = text;
+      var a = ACT[l[0]]; var text = sFill(l[1]); a.lastSay = t; drawBubble(a.b, a.who, text, a.angry); a.b.sp.visible = true; a.b.until = t + 4.6; a.mouth = a.b.until; a.lastLine = text; onAirLine(a.who,text);
       chat.at = t + 5;
     }
 

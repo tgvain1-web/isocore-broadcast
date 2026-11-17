@@ -38,6 +38,29 @@ The original PHP overlay counted unauthenticated Twitch IRC votes in the browser
 
 Until configured, the original `!ghost`/`!echo` prompt will be visible, the owner can test votes from the control panel, but **public Twitch chat votes will not update D1**. The original site's key-hunt/first-finds data is **not migrated**: `/api/ghost.keys` explicitly reports unavailable rather than inventing a result. The arena's historical member/stream data is intentionally blank in the Cloudflare static preview; the original site is untouched.
 
+
+## Lightstream Studio through your existing Xsolla Code overlay
+
+**Use the existing three-tab Xsolla Code editor (HTML, CSS, JavaScript).** Do **not** replace the Xsolla integration with a second direct browser URL if the current Xsolla source already works.
+
+1. Once this branch is published to Cloudflare, open `https://isocore-broadcast.tgvain1.workers.dev/xsolla-setup.html` (use your **actual deployed** Worker hostname if different).
+2. Click **Copy HTML**, paste it into Xsolla's **HTML** tab.
+3. Click **Copy CSS**, paste it into the **CSS** tab. This includes the full transparent/compact right-side camera presentation and local camera subtitles; it does not show a dark preview background.
+4. Click **Copy JavaScript**, paste it into the **JavaScript** tab, **without** `<script>` tags. The generator substitutes the correct Worker base URL. Do not use the raw GitHub JS placeholder without substitution.
+5. Save/publish the Xsolla overlay in your existing Xsolla account. In Lightstream, select that published Xsolla overlay above the **PS5 Game Source**. Keep your gameplay source in place.
+6. Test the stream preview and check that the game remains visible behind Ghost/Echo's picture-in-picture camera. Use the owner controls at `/control.html` to switch characters/angles.
+
+The HTML and CSS are deliberately in their corresponding tabs, not injected as a giant JavaScript page. Only the existing 3D engine, models, bridge and dialogue handler are loaded over HTTPS from your separate Isocore Broadcast Cloudflare Worker.
+
+- Default: compact Ghost/Echo camera at the upper right, with gameplay visible.
+- The CSS tab directly owns the on-air camera size and coordinates.
+- Camera subtitles reflect the actual scripted dialogue from Ghost/Echo and appear inside their camera feed.
+- The Lightstream-specific core-model fast path loads 6 essential 3D models rather than the entire arena catalogue. A full-model diagnostic path remains available.
+- There is also an **optional** standalone `/lightstream.html` for plans supporting custom browser-source URLs, but you do **not** need this with the Xsolla three-tab workflow.
+- The unfinished D1 follower/telemetry branch is separate. No `0002` database migration, OAuth credentials, remote streaming relay, PC, OBS, or paid Lightstream browser URL is required for this presentation-only change.
+
+Never enter `CONTROL_TOKEN`, Twitch OAuth tokens or SimHub credentials into the public Xsolla Code layer. WebGL in Xsolla and Lightstream still needs a real preview test before treating it as broadcast-ready.
+
 ## What this does not do
 
 - Does **not** move the full PHP/SQLite website from InfinityFree, convert its Discord login/session PHP or switch the domain.
