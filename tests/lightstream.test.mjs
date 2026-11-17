@@ -84,7 +84,8 @@ test('Ghost and Echo dialogue appears directly below camera, as plain text',()=>
   assert.equal(caption.dataset.who,'echo');
   assert.equal(caption.children[0].textContent,'ECHO //');
   assert.equal(caption.children[1].textContent,'Tyres and braking points matter.');
-  assert.match(captions,/source!=='game'/);
+  assert.match(captions,/includes\(d\.source\)/);
+  assert.match(captions,/source:'chat'/);
   assert.match(xsollaCSS,/-webkit-line-clamp:2/);
   assert.match(captions,/10\.5\*scale/);
 });
