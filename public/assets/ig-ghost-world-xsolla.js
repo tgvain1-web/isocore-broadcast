@@ -1311,6 +1311,16 @@
     function cameraPosition() {
       if (filmCam) { camera.position.set(filmCam[0], filmCam[1], filmCam[2]); camera.lookAt(filmCam[3], filmCam[4], filmCam[5]); try { ['ghost', 'echo'].forEach(function (w) { if (ACT[w] && ACT[w].b && ACT[w].b.sp) ACT[w].b.sp.visible = false; }); spirit.rotation.y = Math.atan2(camera.position.x - currentPos.x, camera.position.z - currentPos.z); echoSpirit.rotation.y = Math.atan2(camera.position.x - echoPos.x, camera.position.z - echoPos.z); } catch (e) {} return; }
       if (inSuite) { var shot = shotOf(camShot); if (shot) {
+        // Hide the camera owner's cloak before EVERY still or animation frame
+        // in first-person. Previously this happened only in the animation
+        // loop, so the frozen preview could show inside the character model.
+        if (camShot === 'first') {
+          if (inSuite === 'ghost') { spirit.visible = false; suiteHid.ghost = true; }
+          if (inSuite === 'echo') { echoSpirit.visible = false; suiteHid.echo = true; }
+        } else {
+          if (suiteHid.ghost) { spirit.visible = true; suiteHid.ghost = false; }
+          if (suiteHid.echo) { echoSpirit.visible = true; suiteHid.echo = false; }
+        }
         // first person: wide enough to take in all three rig screens, even on a phone held upright (about 100 degrees across)
         var wantFov = camShot === 'first' ? Math.min(105, Math.max(60, 2 * Math.atan(Math.tan(50 * Math.PI / 180) / Math.max(.3, camera.aspect)) * 180 / Math.PI)) : (camShot === 'side' ? (camera.aspect < .9 ? 63 : 49) : (camera.aspect < .9 ? 70 : 55));
         if (Math.abs(camera.fov - wantFov) > .5) { camera.fov = wantFov; camera.updateProjectionMatrix(); }
@@ -3499,14 +3509,26 @@
     function shotOf(name) {
       if (!SUITES) return null; var su = SUITES[inSuite]; if (!su) return null;
       var dx = Math.sin(su.yaw), dz = -Math.cos(su.yaw), px = -dz, pz = dx, e = su.seat, R = su.root.position;
-      if (name === 'first') { var bk = su.back || 0; return [[e[0] - dx * bk, e[1] + .06, e[2] - dz * bk], [e[0] + dx * 4, e[1] - .35, e[2] + dz * 4]]; }
-      if (name === 'shoulder') return [[e[0] - dx * 1.5 + px * .45, e[1] + .45, e[2] - dz * 1.5 + pz * .45], [R.x + dx * .6, e[1] - .15, R.z + dz * .6]];
+      if (name === 'first') {
+        // The old camera sat exactly in the avatar / chair, producing a wall of
+        // cloak texture. Place the viewer just behind and above the seated host.
+        return [[e[0] - dx * 1.15, e[1] + .48, e[2] - dz * 1.15],
+                [e[0] + dx * 4, e[1] - .2, e[2] + dz * 4]];
+      }
+      if (name === 'shoulder') {
+        // A broadcast over-shoulder shot needs breathing room around both cloak
+        // and monitors, not a lens within arm's reach of the avatar.
+        return [[e[0] - dx * 3.65 + px * 1.2, e[1] + .72,
+                 e[2] - dz * 3.65 + pz * 1.2],
+                [e[0] + dx * 1.05, e[1] - .28,
+                 e[2] + dz * 1.05]];
+      }
       if (name === 'side') {
         // A studio camera must see the seated host AND their rig. At 2.05m the
         // cloak was almost touching the lens and blocked half the feed.
         // Place the camera ~4.6m off the side, slightly behind the cockpit,
         // and aim between the host's seat and the monitor/wheel assembly.
-        var sideDistance = 4.6, backDistance = 1.25;
+        var sideDistance = 5.4, backDistance = 1.8;
         return [
           [R.x + px * sideDistance - dx * backDistance, e[1] + .55,
            R.z + pz * sideDistance - dz * backDistance],
