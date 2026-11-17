@@ -3342,6 +3342,22 @@
         addModel(root); var so = [c[2], 0, 1.1, 1.3, c[3]]; so.keep = 1; SOLIDS.push(so);
         var dir = c[3] > 0 ? 1 : -1;      // the chair side points to the middle of the stage
         SUITES[c[0]] = { root: root, cv: cv, tx: tx, scr: scr, back: 0, side: c[6], seat: [c[2] + dir * c[4], c[5] + y, 0], yaw: dir > 0 ? -Math.PI / 2 : Math.PI / 2 };
+        // Soft camera-side key on the host, aimed at the seated character rather than the floor.
+        // The previously removed bright white stadium spots and point-fill lights stay removed.
+        var seat = SUITES[c[0]].seat, yaw = SUITES[c[0]].yaw;
+        var fx = Math.sin(yaw), fz = -Math.cos(yaw), sideX = -fz, sideZ = fx;
+        var rigKeyName = 'Isocore Broadcast Subtle Rig Key ' + c[0];
+        var rigKey = scene.getObjectByName(rigKeyName);
+        if (!rigKey) {
+          rigKey = new T.SpotLight(c[0] === 'ghost' ? 0xe0f0ff : 0xffebda, 10, 5.2, 0.5, 0.86, 2);
+          rigKey.name = rigKeyName;
+          rigKey.castShadow = false;
+          scene.add(rigKey); scene.add(rigKey.target);
+        }
+        // Positioned just ahead of the monitors, facing back to the host's face/upper body.
+        rigKey.position.set(seat[0] + fx * 2.15 + sideX * .6, seat[1] + 1.35,
+                            seat[2] + fz * 2.15 + sideZ * .6);
+        rigKey.target.position.set(seat[0], seat[1] + .65, seat[2]);
       });
       // where their free will can take them now (lib/ghost.php ghost_will_haunts): the stage, their rigs, the screens, the stands
       HAUNTS.ghost = [[-16.8, 1.6, 'at the station'], [-5, .8, 'on the stage'], [-6, 6.5, 'at the front of the stage'], [-24, 3, 'under the big screen'], [-2, 4, 'under the jumbotron'], [-12, 22, 'by the stands']];
