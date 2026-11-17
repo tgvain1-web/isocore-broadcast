@@ -8,7 +8,7 @@
 <script>
 const $=x=>document.getElementById(x);let token='';async function call(path,method='GET',body=null){const r=await fetch(path,{method,cache:'no-store',headers:{...(method==='POST'?{'content-type':'application/json'}:{}),...(token?{'authorization':'Bearer '+token}:{})},body:body?JSON.stringify(body):undefined});let j=await r.json();if(!r.ok)throw Error(j.error||'HTTP '+r.status);return j}
 function status(t){$('status').textContent=t}
-async function load(){try{const d=await call('/api/state');$('who').value=d.camera.who;$('shot').value=d.camera.shot;status('API connected. Camera: '+d.camera.who+' / '+d.camera.shot+'\nTug: '+d.tug.v+'%\nTwitch EventSub not configured until you subscribe.') }catch(e){status(e.message)}}
+async function load(){try{const d=await call('/api/state');$('who').value=d.camera.who;$('shot').value=d.camera.shot;status('API connected. Camera: '+d.camera.who+' / '+d.camera.shot+'\nTug: '+d.tug.v+'%\nCharacter followers: Ghost '+(d.social?.followers?.ghost??0)+' / Echo '+(d.social?.followers?.echo??0)+'\nEcho telemetry: '+(d.telemetry?.live?'LIVE':'not connected')+'\nTwitch EventSub requires its signed subscription; bot replies additionally require owner OAuth setup.') }catch(e){status(e.message)}}
 $('connect').onclick=()=>{token=$('tok').value.trim();load()};
 async function submit(url,data){try{if(!token)throw Error('Enter your private token before making changes.');let j=await call(url,'POST',data);status('Saved: '+JSON.stringify(j));}catch(e){status('ERROR: '+e.message)}}
 $('switch').onclick=()=>submit('/api/control',{who:$('who').value,shot:$('shot').value});
