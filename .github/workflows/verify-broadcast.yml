@@ -167,3 +167,27 @@ jobs:
             sys.exit(1)
           print('GTA VI LAUNCH STATUS: UPDATED ASSETS AND API LIVE (browser/WebGL still needs visual check)')
           PY
+
+      - name: Verify public Twitch chat read-only endpoint and owner authorization
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import urllib.request, urllib.error, json, sys
+          base='https://isocore-broadcast.tgvain1.workers.dev'
+          with urllib.request.urlopen(base+'/assets/lightstream-dialogue.js?v=19',timeout=20) as r:
+              captions=r.read().decode('utf8','replace')
+          with urllib.request.urlopen(base+'/control.html',timeout=20) as r:
+              control=r.read().decode('utf8','replace')
+          assert 'api/chat/latest' in captions, 'No dual chat caption polling'
+          assert 'Connect Twitch account securely' in control, 'Owner auth controls not live'
+          with urllib.request.urlopen(base+'/api/chat/latest',timeout=20) as r:
+              data=json.loads(r.read().decode('utf8','replace'))
+              assert data.get('ok') is True and 'reply' in data, 'Chat reply API invalid'
+          req=urllib.request.Request(base+'/api/chat/status')
+          try:
+              with urllib.request.urlopen(req,timeout=20) as r:
+                  raise RuntimeError('Chat owner status was PUBLIC; HTTP '+str(r.status))
+          except urllib.error.HTTPError as e:
+              assert e.code==403, 'Owner auth was not protected; HTTP '+str(e.code)
+          print('RESULT: TWITCH CHAT v19 LIVE; OAuth owner gated; outgoing replies remain disabled until authorised.')
+          PY
