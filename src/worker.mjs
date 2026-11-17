@@ -2,7 +2,7 @@
  * Public reads are cross-origin. All privileged writes require a bearer secret or a
  * Twitch-signed EventSub message. No stream keys, Discord credentials or OAuth secrets in source.
  */
-import {chatStatus,startChatOAuth,finishChatOAuth,chatOwnerAction,chatLatest,maybeAnswerChat} from './chat-bot.mjs';
+import {chatStatus,startChatOAuth,finishChatOAuth,chatOwnerAction,chatLatest,maybeAnswerChat,revokeChatSubscription} from './chat-bot.mjs';
 const SHOTS = new Set(['first', 'shoulder', 'side', 'wide', 'high']);
 const WHO = new Set(['ghost','echo']);
 const publicHeaders = {
@@ -78,7 +78,11 @@ async function twitchHook(request,env,ctx){
   let data;try{data=JSON.parse(raw);}catch{return fail('Invalid JSON');}
   const typ=request.headers.get('twitch-eventsub-message-type')||'';
   if(typ==='webhook_callback_verification')return new Response(String(data.challenge||''),{headers:{'content-type':'text/plain;charset=utf-8',...publicHeaders}});
-  if(typ==='revocation')return answer({ok:true,revoked:true});
+  if(typ==='revocation'){
+    if(data.subscription?.type==='channel.chat.message'&&env.DB)
+      await revokeChatSubscription(env.DB);
+    return answer({ok:true,revoked:true});
+  }
   if(typ!=='notification'||data.subscription?.type!=='channel.chat.message')return answer({ok:true,ignored:true});
   const ev=data.event||{};
   if(env.TWITCH_BROADCASTER_ID && String(ev.broadcaster_user_id)!==String(env.TWITCH_BROADCASTER_ID))return fail('Wrong broadcaster',403);
