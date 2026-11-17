@@ -1311,18 +1311,11 @@
     function cameraPosition() {
       if (filmCam) { camera.position.set(filmCam[0], filmCam[1], filmCam[2]); camera.lookAt(filmCam[3], filmCam[4], filmCam[5]); try { ['ghost', 'echo'].forEach(function (w) { if (ACT[w] && ACT[w].b && ACT[w].b.sp) ACT[w].b.sp.visible = false; }); spirit.rotation.y = Math.atan2(camera.position.x - currentPos.x, camera.position.z - currentPos.z); echoSpirit.rotation.y = Math.atan2(camera.position.x - echoPos.x, camera.position.z - echoPos.z); } catch (e) {} return; }
       if (inSuite) { var shot = shotOf(camShot); if (shot) {
-        // Hide the camera owner's cloak before EVERY still or animation frame
-        // in first-person. Previously this happened only in the animation
-        // loop, so the frozen preview could show inside the character model.
-        if (camShot === 'first') {
-          if (inSuite === 'ghost') { spirit.visible = false; suiteHid.ghost = true; }
-          if (inSuite === 'echo') { echoSpirit.visible = false; suiteHid.echo = true; }
-        } else {
-          if (suiteHid.ghost) { spirit.visible = true; suiteHid.ghost = false; }
-          if (suiteHid.echo) { echoSpirit.visible = true; suiteHid.echo = false; }
-        }
-        // first person: wide enough to take in all three rig screens, even on a phone held upright (about 100 degrees across)
-        var wantFov = camShot === 'first' ? Math.min(105, Math.max(60, 2 * Math.atan(Math.tan(50 * Math.PI / 180) / Math.max(.3, camera.aspect)) * 180 / Math.PI)) : (camShot === 'side' ? (camera.aspect < .9 ? 63 : 49) : (camera.aspect < .9 ? 70 : 55));
+        // Streamer Cam now looks BACK at the seated host from the far side of
+        // the screens. Keep both character models visible for every shot.
+        if (suiteHid.ghost) { spirit.visible = true; suiteHid.ghost = false; }
+        if (suiteHid.echo) { echoSpirit.visible = true; suiteHid.echo = false; }
+        var wantFov = camShot === 'first' ? (camera.aspect < .9 ? 65 : 53) : (camShot === 'side' ? (camera.aspect < .9 ? 63 : 49) : (camera.aspect < .9 ? 70 : 55));
         if (Math.abs(camera.fov - wantFov) > .5) { camera.fov = wantFov; camera.updateProjectionMatrix(); }
         camera.position.set(shot[0][0], shot[0][1], shot[0][2]); camera.lookAt(shot[1][0], shot[1][1], shot[1][2]); return; } }
       if (mode === 'walk') { var cq = Math.cos(ppitch), ey = EYE + bob + seatY + standY(); camera.position.set(player.x, ey, player.z); camera.lookAt(player.x + Math.sin(pyaw) * cq, ey + Math.sin(ppitch), player.z - Math.cos(pyaw) * cq); return; }
@@ -1358,7 +1351,7 @@
         blinkers.forEach(function (b, i) { b.visible = Math.sin(elapsed * 2.4 + i) > .55 && !(b.userData.fx && qual === 0); }); fireLights.forEach(function (f, i) { if (f.isLight) f.intensity = 8 + Math.sin(elapsed * 13 + i) * 3; else f.scale.set(1, 1 + Math.sin(elapsed * 11) * .18, 1); }); waters.forEach(function (w) { w.material.opacity = .55 + Math.sin(elapsed * 3) * .15; });
         var pulse = .5 + Math.sin(elapsed * 2.1) * .5, nearGhost = Math.max(0, 1 - Math.hypot(player.x - currentPos.x, player.z - currentPos.z) / 8); halo.material.opacity = .24 + pulse * .14; spark.scale.setScalar(1.0 + pulse * .25 + nearGhost * .12); heart.scale.set(.15 + pulse * .015, .15 + pulse * .015, .1); spinner.rotation.z = elapsed * .22; figure.rotation.z = Math.sin(elapsed * .7 * pace) * .05 * pace; figure.rotation.x = -.1 * nearGhost; clouds.rotation.y = elapsed * .003;
         spirit.rotation.y = filmCam ? Math.atan2(camera.position.x - currentPos.x, camera.position.z - currentPos.z) : (onAir('ghost') && SUITES.ghost && Math.hypot(currentPos.x - SUITES.ghost.seat[0], currentPos.z - SUITES.ghost.seat[2]) < 1.2 ? SUITES.ghost.yaw : lifeFace('ghost', currentPos, elapsed));
-        if (inSuite === 'ghost' && camShot === 'first') { spirit.visible = false; suiteHid.ghost = true; } else if (suiteHid.ghost) { spirit.visible = true; suiteHid.ghost = false; }
+        if (suiteHid.ghost) { spirit.visible = true; suiteHid.ghost = false; }
         shadow.position.set(currentPos.x, .125, currentPos.z); dust.rotation.y = elapsed * .007;
         beacon.material = Math.sin(elapsed * 2.2) > .2 ? mats.light : mats.off;
         slot.material = world.where === 'post' && Math.sin(elapsed * 3) > 0 ? mats.white : mats.warm;
@@ -2130,7 +2123,7 @@
       if (echoFigure) echoFigure.rotation.x = -.1 * Math.max(0, 1 - Math.hypot(player.x - echoPos.x, player.z - echoPos.z) / 8);
       echoSpirit.position.set(echoPos.x, studioEchoSeat ? studioEchoSeat[1] - 1.02 : .13 + floorAt(echoPos.x, echoPos.z) + Math.sin(t * 1.9 + 1.3) * .11, echoPos.z);
       echoSpirit.rotation.y = filmCam ? Math.atan2(camera.position.x - echoPos.x, camera.position.z - echoPos.z) : (onAir('echo') && SUITES.echo && Math.hypot(echoPos.x - SUITES.echo.seat[0], echoPos.z - SUITES.echo.seat[2]) < 1.2 ? SUITES.echo.yaw : lifeFace('echo', echoPos, t));
-      if (inSuite === 'echo' && camShot === 'first') { echoSpirit.visible = false; suiteHid.echo = true; } else if (suiteHid.echo) { echoSpirit.visible = true; suiteHid.echo = false; }
+      if (suiteHid.echo) { echoSpirit.visible = true; suiteHid.echo = false; }
     }
     (function () { var w = (X.echo && ECHO_AT[X.echo.where]) || ECHO_AT.finish; echoPos.set(w[0], 0, w[1]); echoSpirit.position.set(w[0], .13, w[1]); })();
 
@@ -3505,15 +3498,22 @@
     }
     // ---- Fixed cameras while broadcasting: five framed shots and a row of buttons to cut between them
     var camShot = 'first', camRow = null;
-    var SHOTS = [['first', 'First person'], ['shoulder', 'Over shoulder'], ['side', 'Side on'], ['wide', 'Stage wide'], ['high', 'Jumbotron']];
+    var SHOTS = [['first', 'Streamer cam'], ['shoulder', 'Over shoulder'], ['side', 'Side on'], ['wide', 'Stage wide'], ['high', 'Jumbotron']];
     function shotOf(name) {
       if (!SUITES) return null; var su = SUITES[inSuite]; if (!su) return null;
       var dx = Math.sin(su.yaw), dz = -Math.cos(su.yaw), px = -dz, pz = dx, e = su.seat, R = su.root.position;
       if (name === 'first') {
-        // The old camera sat exactly in the avatar / chair, producing a wall of
-        // cloak texture. Place the viewer just behind and above the seated host.
-        return [[e[0] - dx * 1.15, e[1] + .48, e[2] - dz * 1.15],
-                [e[0] + dx * 4, e[1] - .2, e[2] + dz * 4]];
+        // STREAMER CAM: camera is placed beyond the rig's monitor array,
+        // looking BACK towards the occupied chair. An offset to the side and
+        // a raised lens keep screen backs in the foreground without hiding
+        // the streamer's upper body or face.
+        var front = 3.65, lateral = 1.65;
+        return [
+          [e[0] + dx * front + px * lateral,
+           e[1] + .78,
+           e[2] + dz * front + pz * lateral],
+          [e[0] - dx * .08, e[1] - .28, e[2] - dz * .08]
+        ];
       }
       if (name === 'shoulder') {
         // A broadcast over-shoulder shot needs breathing room around both cloak
