@@ -2125,10 +2125,14 @@
       if (!echoOn && !studioEchoSeat) return;
       if (echoSpinner) echoSpinner.rotation.z = -t * .22;
       var w = (filmPose && filmPose.echo) || onAir('echo') || lifeGoal('echo') || (SEALED ? [14.5, 2.2] : (X.echo && ECHO_AT[X.echo.where]) || ECHO_AT.finish);
-      if (studioEchoSeat) echoPos.set(studioEchoSeat[0], 0, studioEchoSeat[2]);
+      var cockpitDriver = studioEchoSeat && SUITES.echo.driver;
+      if (studioEchoSeat) echoPos.set(cockpitDriver ? cockpitDriver.x : studioEchoSeat[0], 0, cockpitDriver ? cockpitDriver.z : studioEchoSeat[2]);
       else echoPos.lerp(new T.Vector3(w[0], 0, w[1]), .012);
       if (echoFigure) echoFigure.rotation.x = -.1 * Math.max(0, 1 - Math.hypot(player.x - echoPos.x, player.z - echoPos.z) / 8);
-      echoSpirit.position.set(echoPos.x, studioEchoSeat ? studioEchoSeat[1] - 1.02 : .13 + floorAt(echoPos.x, echoPos.z) + Math.sin(t * 1.9 + 1.3) * .11, echoPos.z);
+      var actorY = cockpitDriver && Number.isFinite(cockpitDriver.actorFootY)
+        ? cockpitDriver.bottomY - cockpitDriver.actorFootY
+        : (studioEchoSeat ? studioEchoSeat[1] - 1.02 : .13 + floorAt(echoPos.x, echoPos.z) + Math.sin(t * 1.9 + 1.3) * .11);
+      echoSpirit.position.set(echoPos.x, actorY, echoPos.z);
       echoSpirit.rotation.y = filmCam ? Math.atan2(camera.position.x - echoPos.x, camera.position.z - echoPos.z) : (onAir('echo') && SUITES.echo && Math.hypot(echoPos.x - SUITES.echo.seat[0], echoPos.z - SUITES.echo.seat[2]) < 1.2 ? SUITES.echo.yaw : lifeFace('echo', echoPos, t));
       if (suiteHid.echo) { echoSpirit.visible = true; suiteHid.echo = false; }
     }
@@ -3316,7 +3320,9 @@
       [spirit, echoSpirit].forEach(function (group) {
         var avatar = group.userData.character;
         if (!avatar || avatar.userData.broadcastSeated) return;
-        avatar.scale.multiplyScalar(.78); // compact floating-cloak avatar fits inside the chair/cockpit
+        // Echo is a floating-cloak model, not a skeletal seated human. Size him to the
+        // cockpit backrest while Ghost keeps his existing scale and proportions.
+        avatar.scale.multiplyScalar(group === echoSpirit ? .65 : .78);
         avatar.rotation.x = -.08; // subtle forward lean toward the monitors
         avatar.userData.broadcastSeated = true;
       });
@@ -3342,6 +3348,27 @@
         addModel(root); var so = [c[2], 0, 1.1, 1.3, c[3]]; so.keep = 1; SOLIDS.push(so);
         var dir = c[3] > 0 ? 1 : -1;      // the chair side points to the middle of the stage
         SUITES[c[0]] = { root: root, cv: cv, tx: tx, scr: scr, back: 0, side: c[6], seat: [c[2] + dir * c[4], c[5] + y, 0], yaw: dir > 0 ? -Math.PI / 2 : Math.PI / 2 };
+        if (c[0] === 'echo') {
+          // Anchor Echo to the REAL cockpit upholstery instead of the old
+          // approximate world coordinate. Fabric's lower extent is the seat cushion.
+          var upholstery = root.getObjectByName('Fabric');
+          var driver = null;
+          if (upholstery && upholstery.isMesh) {
+            root.updateMatrixWorld(true);
+            var upholsteryBox = new T.Box3().setFromObject(upholstery);
+            if (!upholsteryBox.isEmpty()) {
+              var middle = upholsteryBox.getCenter(new T.Vector3());
+              driver = { x: middle.x, z: middle.z, bottomY: upholsteryBox.min.y + .04 };
+            }
+          }
+          var actor = echoSpirit.userData.character;
+          if (driver && actor) {
+            echoSpirit.updateMatrixWorld(true);
+            var actorBottom = new T.Box3().setFromObject(actor).min.y;
+            driver.actorFootY = actorBottom - echoSpirit.position.y;
+          }
+          SUITES.echo.driver = driver;
+        }
         // Attach the Streamer Cam virtually just above the MAIN monitor bezel.
         // Use the loaded screen mesh's actual world-space bounds, not guessed arena coordinates.
         // A small offset toward the host avoids filming through the screen itself.
