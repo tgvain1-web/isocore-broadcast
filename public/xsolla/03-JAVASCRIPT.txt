@@ -37,7 +37,7 @@
     }
     load('stage.js')
       .then(function(){return load('overlay-stage.js')})
-      .then(function(){return load('lightstream-dialogue.js')})
+      .then(function(){return load('lightstream-dialogue.js').catch(function(){return null;})})
       .then(function(){return load('bridge.js')})
       .catch(function(e){error(e.message)});
   }
