@@ -89,8 +89,76 @@ async function twitchHook(request,env){
   const accepted=await tally(env.DB,side,id,who);
   return answer({ok:true,vote:accepted});
 }
+/* Public read-only live game category for Ghost's broadcast commentary.
+ * Twitch Helix uses server-side application credentials. Neither OAuth tokens
+ * nor the client secret are exposed to Xsolla or visitors.
+ */
+let twitchAppToken='',twitchAppExpiresAt=0;
+let streamContextCache={at:0,data:null,channel:''};
+async function twitchAppAccessToken(env){
+  const now=time();
+  if(twitchAppToken && now<twitchAppExpiresAt)return twitchAppToken;
+  const form=new URLSearchParams({
+    client_id:String(env.TWITCH_CLIENT_ID),
+    client_secret:String(env.TWITCH_CLIENT_SECRET),
+    grant_type:'client_credentials'
+  });
+  const res=await fetch('https://id.twitch.tv/oauth2/token',{
+    method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},
+    body:form.toString()
+  });
+  if(!res.ok)throw Error('Twitch authentication unavailable');
+  const data=await res.json();
+  if(!data.access_token)throw Error('Twitch returned no access token');
+  twitchAppToken=String(data.access_token);
+  twitchAppExpiresAt=now+Math.max(60,Number(data.expires_in||3600)-300);
+  return twitchAppToken;
+}
+async function getStreamContext(env){
+  const channel=String(env.TWITCH_CHANNEL_LOGIN||'igvain').trim().toLowerCase();
+  if(!/^[a-z0-9_]{3,25}$/.test(channel))
+    return {ok:false,configured:false,reason:'Invalid Twitch channel configuration'};
+  if(!env.TWITCH_CLIENT_ID||!env.TWITCH_CLIENT_SECRET)
+    return {ok:false,configured:false,channel,reason:'Twitch application credentials are not configured'};
+  const now=time();
+  if(streamContextCache.data && streamContextCache.channel===channel &&
+     now-streamContextCache.at<60)return streamContextCache.data;
+  try{
+    let token=await twitchAppAccessToken(env);
+    const url=new URL('https://api.twitch.tv/helix/streams');
+    url.searchParams.set('user_login',channel);
+    let res=await fetch(url.toString(),{
+      headers:{'Client-Id':String(env.TWITCH_CLIENT_ID),'Authorization':'Bearer '+token}
+    });
+    if(res.status===401){
+      twitchAppToken='';twitchAppExpiresAt=0;
+      token=await twitchAppAccessToken(env);
+      res=await fetch(url.toString(),{
+        headers:{'Client-Id':String(env.TWITCH_CLIENT_ID),'Authorization':'Bearer '+token}
+      });
+    }
+    if(!res.ok)throw Error('Twitch stream information unavailable');
+    const data=await res.json();
+    const live=data&&Array.isArray(data.data)?data.data[0]:null;
+    const answerData={
+      ok:true,configured:true,channel,live:!!live,
+      game:live?String(live.game_name||'').slice(0,100):'',
+      title:live?String(live.title||'').slice(0,160):'',
+      updated_at:now,source:'twitch'
+    };
+    streamContextCache={at:now,data:answerData,channel};
+    return answerData;
+  }catch(e){
+    // Do not leak upstream tokens, credentials, or sensitive error bodies.
+    return {ok:false,configured:true,channel,reason:'Twitch stream category temporarily unavailable'};
+  }
+}
 async function api(request,env,path){
   if(request.method==='OPTIONS')return new Response(null,{status:204,headers:publicHeaders});
+  if(path==='/api/stream-context' && request.method==='GET') {
+    const context=await getStreamContext(env);
+    return answer(context,context.ok?200:503);
+  }
   if(!env.DB)return fail('D1 binding is missing',503);
   if(!await dbReady(env))return fail('D1 migrations have not been applied',503);
   const db=env.DB;
