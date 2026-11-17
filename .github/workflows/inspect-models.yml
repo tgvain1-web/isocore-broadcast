@@ -1,0 +1,35 @@
+name: Inspect rig model structures
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/inspect-models.yml']
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read rig GLB metadata (no model changes)
+        run: |
+          python3 - <<'PY'
+          import struct,json,pathlib
+          for kind in ('ghost-low','echo-low','station-low','simrig-low'):
+              path=pathlib.Path('public/assets/models/'+kind+'.glb')
+              with path.open('rb') as f:
+                  h=f.read(12)
+                  assert h[:4]==b'glTF',(kind,h[:4])
+                  length,tag=struct.unpack('<I4s',f.read(8))
+                  assert tag==b'JSON'
+                  doc=json.loads(f.read(length))
+              print('MODEL',kind,'BYTES',path.stat().st_size,'NODES',len(doc.get('nodes',[])),'MESHES',len(doc.get('meshes',[])))
+              print('ANIMATIONS',[(a.get('name'),len(a.get('channels',[]))) for a in doc.get('animations',[])])
+              print('SKINS',len(doc.get('skins',[])))
+              nodes=doc.get('nodes',[])
+              if kind.startswith(('ghost','echo')):
+                  print('ROOTS',[{k:n.get(k) for k in ('name','translation','rotation','scale','children') if k in n} for n in nodes[:12]])
+                  print('BONE_NODES',[(i,n.get('name')) for i,n in enumerate(nodes) if any(t in n.get('name','').lower() for t in ('hip','spine','thigh','upleg','knee','shin','arm','leg','foot','pelvis','skel','root','idle'))][:120])
+                  print('ANIM_TARGETS',[[nodes[ch.get('target',{}).get('node',0)].get('name','') for ch in a.get('channels',[])[:25]] for a in doc.get('animations',[])[:5]])
+              else:
+                  print('RIG_NODES',[(i,n.get('name'),n.get('translation')) for i,n in enumerate(nodes) if any(t in n.get('name','').lower() for t in ('seat','chair','cockpit','wheel','driver','pedal','rig'))][:60])
+          PY
