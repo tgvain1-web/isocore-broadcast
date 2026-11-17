@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {parseDirectedQuestion,chatLatest,chatStatus,maybeAnswerChat} from '../src/chat-bot.mjs';
+import {parseDirectedQuestion,chatLatest,chatStatus,maybeAnswerChat,startChatOAuth,chatOwnerAction,confirmChatSubscription} from '../src/chat-bot.mjs';
 
 test('explicit Ghost/Echo questions are recognised without confusing vote commands',()=>{
  assert.deepEqual(parseDirectedQuestion('!askghost Which GTA VI car should we try?'),{
@@ -132,4 +132,83 @@ test('one signed chat question is sent to Twitch and mirrored once, no duplicate
      async()=>({game:'Grand Theft Auto VI'})),false);
    assert.equal(sent.length,1);
  }finally{globalThis.fetch=originalFetch}
+});
+
+test('one Twitch account grants all app-token EventSub permissions during re-authorization',async()=>{
+ const env={
+  TWITCH_CLIENT_ID:'client-example',TWITCH_CLIENT_SECRET:'client-secret',
+  TWITCH_EVENTSUB_SECRET:'secret-example',TWITCH_SESSION_KEY:'an-example-key-with-more-than-thirty-two-characters'
+ };
+ const db={prepare(){return {bind(){return this},run:async()=>({meta:{changes:1}})}}};
+ const r=await startChatOAuth(env,db);
+ assert.equal(r.ok,true);
+ const url=new URL(r.authorization_url);
+ assert.equal(url.origin,'https://id.twitch.tv');
+ assert.equal(url.searchParams.get('force_verify'),'true');
+ const scopes=new Set((url.searchParams.get('scope')||'').split(' '));
+ for(const p of ['user:read:chat','user:write:chat','user:bot','channel:bot'])
+   assert.ok(scopes.has(p),'Required scope missing: '+p);
+ assert.equal(url.searchParams.get('redirect_uri'),
+  'https://isocore-broadcast.tgvain1.workers.dev/oauth/twitch/callback');
+});
+
+test('EventSub stays pending until signed webhook proves delivery to the same channel',async()=>{
+ let bot={enabled:0,broadcaster_id:'111',login:'igvain',subscribed:0};
+ const db={
+  prepare(sql){
+   let args=[];
+   return {
+    bind(...v){args=v;return this},
+    async first(){return sql.includes('FROM chat_bot_state')?bot:null},
+    async run(){
+     if(sql.includes('SET subscribed=CASE'))bot.subscribed=bot.subscribed===1?1:2;
+     if(sql.includes('SET subscribed=1')&&args[0]===bot.broadcaster_id)bot.subscribed=1;
+     return {meta:{changes:1}};
+    }
+   };
+  }
+ };
+ const env={TWITCH_CLIENT_ID:'client',TWITCH_CLIENT_SECRET:'secret',
+   TWITCH_EVENTSUB_SECRET:'safe-secret',TWITCH_SESSION_KEY:'a-unique-test-key-longer-than-32-characters',
+   AI:{run:async()=>({response:'Yes!'})}};
+ const original=globalThis.fetch;
+ globalThis.fetch=async(url,options)=>{
+  assert.equal(String(url),'https://api.twitch.tv/helix/eventsub/subscriptions');
+  const payload=JSON.parse(options.body);
+  assert.deepEqual(payload.condition,{broadcaster_user_id:'111',user_id:'111'});
+  return {status:202,ok:true};
+ };
+ try{
+  const r=await chatOwnerAction('/api/chat/subscribe',{},env,db,async()=> 'app-token');
+  assert.equal(r.ok,true);
+  assert.equal(bot.subscribed,2,'Twitch 202 means pending; it is not live yet');
+  const state=await chatStatus(env,db);
+  assert.equal(state.subscribed,false);
+  assert.equal(state.subscription_pending,true);
+  assert.equal(state.ready,false);
+  assert.equal(await confirmChatSubscription(db,{type:'channel.chat.message',
+    condition:{broadcaster_user_id:'222',user_id:'222'}}),true);
+  assert.equal(bot.subscribed,2,'An unrelated broadcaster challenge cannot enable replies');
+  assert.equal(await confirmChatSubscription(db,{type:'channel.chat.message',
+    condition:{broadcaster_user_id:'111',user_id:'111'}}),true);
+  assert.equal(bot.subscribed,1);
+  assert.equal((await chatStatus(env,db)).ready,true);
+ }finally{globalThis.fetch=original}
+});
+
+test('Twitch 403 tells the owner to re-authorize missing bot scopes, without exposing credentials',async()=>{
+ const db={prepare(){return {bind(){return this},
+  async first(){return {enabled:0,broadcaster_id:'111',subscribed:0}},
+  async run(){return {meta:{changes:1}}}}}};
+ const env={TWITCH_CLIENT_ID:'cid',TWITCH_CLIENT_SECRET:'topsecret',
+  TWITCH_EVENTSUB_SECRET:'secret',TWITCH_SESSION_KEY:'a-long-private-key-for-encryption-over-32-characters'};
+ const orig=globalThis.fetch;
+ globalThis.fetch=async()=>({status:403,ok:false});
+ try{
+  const v=await chatOwnerAction('/api/chat/subscribe',{},env,db,async()=> 'app-token');
+  assert.equal(v.ok,false);
+  assert.match(v.error,/Reconnect Twitch/);
+  assert.match(v.error,/user:bot/);
+  assert.doesNotMatch(v.error,/topsecret/);
+ }finally{globalThis.fetch=orig}
 });
