@@ -174,16 +174,20 @@ jobs:
           python3 - <<'PY'
           import urllib.request, urllib.error, json, sys
           base='https://isocore-broadcast.tgvain1.workers.dev'
-          with urllib.request.urlopen(base+'/assets/lightstream-dialogue.js?v=19',timeout=20) as r:
+          def get(url):
+              return urllib.request.urlopen(urllib.request.Request(url,headers={
+                'User-Agent':'Isocore-Broadcast-SmokeTest/1.0','Cache-Control':'no-cache'
+              }),timeout=20)
+          with get(base+'/assets/lightstream-dialogue.js?v=19') as r:
               captions=r.read().decode('utf8','replace')
-          with urllib.request.urlopen(base+'/control.html',timeout=20) as r:
+          with get(base+'/control.html') as r:
               control=r.read().decode('utf8','replace')
           assert 'api/chat/latest' in captions, 'No dual chat caption polling'
           assert 'Connect Twitch account securely' in control, 'Owner auth controls not live'
-          with urllib.request.urlopen(base+'/api/chat/latest',timeout=20) as r:
+          with get(base+'/api/chat/latest') as r:
               data=json.loads(r.read().decode('utf8','replace'))
               assert data.get('ok') is True and 'reply' in data, 'Chat reply API invalid'
-          req=urllib.request.Request(base+'/api/chat/status')
+          req=urllib.request.Request(base+'/api/chat/status',headers={'User-Agent':'Isocore-Broadcast-SmokeTest/1.0'})
           try:
               with urllib.request.urlopen(req,timeout=20) as r:
                   raise RuntimeError('Chat owner status was PUBLIC; HTTP '+str(r.status))
