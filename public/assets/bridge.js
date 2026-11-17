@@ -5,6 +5,9 @@
   if(!ROOT)return;
   if(ROOT.dataset.loaded==='1')return;
   ROOT.dataset.loaded='1';
+  // Keep the 3D feed concealed until the selected real camera is ready.
+  // Loading/logo/welcome graphics must never appear in the broadcast output.
+  ROOT.classList.add('isocore-camera-booting');
   const HOST = new URL('../',document.currentScript && document.currentScript.src || location.href).href;
   const $ = id => document.getElementById(id);
   let who='ghost',shot='first',ready=false,apiOK=false,booted=false;
@@ -24,10 +27,10 @@
   scaleOverlay();
   function status(message,error){diag.textContent=message;diag.classList.toggle('error',!!error);diag.hidden=false;}
   function script(path){return new Promise((resolve,reject)=>{
-    const s=document.createElement('script');s.src=HOST+path+'?v=9';s.crossOrigin='anonymous';
+    const s=document.createElement('script');s.src=HOST+path+'?v=10';s.crossOrigin='anonymous';
     s.onload=resolve;s.onerror=()=>reject(Error('External script blocked: '+path));document.head.appendChild(s);
   });}
-  function css(path){const l=document.createElement('link');l.rel='stylesheet';l.href=HOST+path+'?v=9';document.head.appendChild(l);}
+  function css(path){const l=document.createElement('link');l.rel='stylesheet';l.href=HOST+path+'?v=10';document.head.appendChild(l);}
   async function getState(){
     try{
       const resp=await fetch(HOST+'api/state',{cache:'no-store',credentials:'omit'});
@@ -40,6 +43,7 @@
       if(engine&&typeof engine.broadcast==='function'){
         if(engine.broadcast(who,shot)){
           ready=true;
+          ROOT.classList.remove('isocore-camera-booting');
           diag.hidden=true;
         } else if(booted && !ready){status('ISOCORE // 3D MODELS STILL LOADING',false);}
       }
