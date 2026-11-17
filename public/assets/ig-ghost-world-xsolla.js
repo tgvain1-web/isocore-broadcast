@@ -4103,8 +4103,12 @@
     // Broadcast lines become captions immediately UNDER the camera in
     // both Xsolla/Lightstream and the standalone arena preview.
     function onAirLine(who,text) {
+      // The studio feed is exclusively about the selected Twitch game.
+      // Preserve legacy arena conversations in the original world, but never
+      // forward them into the public broadcast's below-camera captions.
+      if (SEALED) return;
       if(!(document.body.classList.contains('isocore-lightstream') || document.body.classList.contains('isocore-preview')) || !text) return;
-      try { window.dispatchEvent(new CustomEvent('isocore:dialogue',{detail:{who:who,text:text}})); } catch(e){}
+      try { window.dispatchEvent(new CustomEvent('isocore:dialogue',{detail:{who:who,text:text,source:'arena'}})); } catch(e){}
     }
     function isOut(who) { var guest = ACT && ACT[who] && ACT[who].guestUntil > elapsed; return who === 'ghost' ? (typeof ghostOut === 'undefined' || ghostOut || guest) : (echoOn && (typeof echoOut === 'undefined' || echoOut || guest)); }
     // Free will (Scout's PC on): nothing scripted is said. They only say the lines they wrote themselves with their last choice:
