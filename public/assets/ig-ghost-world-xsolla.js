@@ -3335,18 +3335,18 @@
           shader.uniforms.uRigLampA = { value: lampA };
           shader.uniforms.uRigLampB = { value: lampB };
           shader.uniforms.uRigLampTint = { value: tint };
-          shader.vertexShader = 'varying vec3 vRigUpWorld;\\n' +
+          shader.vertexShader = 'varying vec3 vRigUpWorld;\n' +
             shader.vertexShader.replace('#include <worldpos_vertex>',
-              '#include <worldpos_vertex>\\nvRigUpWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+              '#include <worldpos_vertex>\nvRigUpWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;');
           shader.fragmentShader =
-            'varying vec3 vRigUpWorld;\\nuniform vec3 uRigLampA;\\nuniform vec3 uRigLampB;\\nuniform vec3 uRigLampTint;\\n' +
+            'varying vec3 vRigUpWorld;\nuniform vec3 uRigLampA;\nuniform vec3 uRigLampB;\nuniform vec3 uRigLampTint;\n' +
             shader.fragmentShader.replace('#include <emissivemap_fragment>',
-              '#include <emissivemap_fragment>\\n' +
-              'vec3 rigDa = vRigUpWorld - uRigLampA;\\n' +
-              'vec3 rigDb = vRigUpWorld - uRigLampB;\\n' +
-              'float rigUpA = smoothstep(-0.05, 0.20, rigDa.y) * (1.0 - smoothstep(0.80, 1.85, rigDa.y)) * (1.0 - smoothstep(0.30, 1.20, length(rigDa.xz)));\\n' +
-              'float rigUpB = smoothstep(-0.05, 0.20, rigDb.y) * (1.0 - smoothstep(0.80, 1.85, rigDb.y)) * (1.0 - smoothstep(0.30, 1.20, length(rigDb.xz)));\\n' +
-              'totalEmissiveRadiance += uRigLampTint * min(0.18, 0.14 * (rigUpA + rigUpB));\\n');
+              '#include <emissivemap_fragment>\n' +
+              'vec3 rigDa = vRigUpWorld - uRigLampA;\n' +
+              'vec3 rigDb = vRigUpWorld - uRigLampB;\n' +
+              'float rigUpA = smoothstep(-0.05, 0.20, rigDa.y) * (1.0 - smoothstep(0.80, 1.85, rigDa.y)) * (1.0 - smoothstep(0.30, 1.20, length(rigDa.xz)));\n' +
+              'float rigUpB = smoothstep(-0.05, 0.20, rigDb.y) * (1.0 - smoothstep(0.80, 1.85, rigDb.y)) * (1.0 - smoothstep(0.30, 1.20, length(rigDb.xz)));\n' +
+              'totalEmissiveRadiance += uRigLampTint * min(0.18, 0.14 * (rigUpA + rigUpB));\n');
         };
         mat.name = (old.name || o.name || 'Rig') + '_RigOnlyUplight_' + who;
         o.material = mat;
