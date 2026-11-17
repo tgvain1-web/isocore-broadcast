@@ -190,8 +190,11 @@ async function api(request,env,path){
     if(typeof data.game!=='string'||data.game.length>100)return fail('Game name must be 100 characters or fewer');
     const game=data.game.trim().replace(/[\\r\\n\\t]/g,' ');
     try{
+      // One-time, owner-authorised setup avoids requiring Wrangler/D1 CLI on a
+      // mobile-only launch. The included 0002 migration is still canonical.
+      await db.prepare("CREATE TABLE IF NOT EXISTS stream_game_override (id INTEGER PRIMARY KEY CHECK(id=1),game TEXT NOT NULL DEFAULT '',updated_at INTEGER NOT NULL DEFAULT 0)").run();
       await db.prepare('INSERT INTO stream_game_override (id,game,updated_at) VALUES (1,?,?) ON CONFLICT(id) DO UPDATE SET game=excluded.game,updated_at=excluded.updated_at').bind(game,time()).run();
-    }catch(e){return fail('Game control unavailable: apply D1 migration 0002',503);}
+    }catch(e){return fail('Game control unavailable: check Cloudflare D1 binding',503);}
     streamContextCache.at=0;
     return answer({ok:true,game,source:game?'owner':'auto'});
   }
