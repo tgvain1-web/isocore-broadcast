@@ -76,18 +76,29 @@ jobs:
                   preview=''; styles=''
               with urllib.request.urlopen(urllib.request.Request(base+'/api/state',headers={'User-Agent':'Isocore-Broadcast-SmokeTest/1.0'}), timeout=20) as state_url:
                   current=json.loads(state_url.read().decode('utf-8','replace')).get('camera',{})
+              try:
+                  with urllib.request.urlopen(urllib.request.Request(base+'/assets/bridge.js',headers={'User-Agent':'Isocore-Broadcast-SmokeTest/1.0'}), timeout=20) as a:
+                      bridge=a.read().decode('utf-8','replace')
+                  with urllib.request.urlopen(urllib.request.Request(base+'/assets/ig-ghost-world-xsolla.js',headers={'User-Agent':'Isocore-Broadcast-SmokeTest/1.0'}), timeout=20) as a:
+                      engine=a.read().decode('utf-8','replace')
+              except urllib.error.HTTPError as e:
+                  print('Engine HTTP',e.code)
+                  bridge='';engine=''
               if ('id="iso-preview-toggle"' in preview and
-                  'bridge.js?v=9' in preview and
-                  'V0.6.2' in styles and
-                  'show-igw-cams' in styles and
+                  'bridge.js?v=10' in preview and
+                  'V0.6.4' in styles and
+                  "ROOT.classList.add('isocore-camera-booting')" in bridge and
+                  'Isocore Broadcast Studio Key' in engine and
+                  'renderer.toneMappingExposure = 1.32' in engine and
+                  'coverN = names.length;' in engine and
                   (current.get('shot')=='first' or (current.get('shot') in ('side','shoulder','wide','high') and int(current.get('updated_at') or 0)>0))):
-                  print('RESULT: V0.6.3 FIRST-PERSON DEFAULT / SIDE-FRAME UPDATE DEPLOYED')
+                  print('RESULT: V0.6.4 BRIGHTER RIGS / INTRO-FREE CAMERA DEPLOYED')
                   print('ON-AIR STATE:',json.dumps(current))
                   break
               print('Updated preview not deployed yet, attempt',attempt+1)
               time.sleep(8)
           else:
-              print('RESULT: PREVIEW INTERACTION FIX NOT YET DEPLOYED')
+              print('RESULT: V0.6.4 BRIGHTER RIGS / INTRO-FREE CAMERA NOT YET DEPLOYED')
               sys.exit(1)
           # This test checks HTTP availability. The actual arena close button still needs
           # a browser interaction test, which HTTP-only checks cannot simulate.
