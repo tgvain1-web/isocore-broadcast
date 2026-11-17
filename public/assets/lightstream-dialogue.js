@@ -26,6 +26,19 @@
       element.appendChild(who);element.appendChild(line);
     }
     if(element.parentNode!==parent)parent.appendChild(element);
+    // Existing Xsolla copies may retain the old 'inside camera' CSS. These
+    // explicit layout values take precedence without any Xsolla repaste.
+    var preview=document.body.classList.contains('isocore-preview');
+    var rules=preview?{
+      position:'absolute',top:'calc(81% + 6px)',bottom:'auto',
+      left:'13%',right:'auto',width:'74%',maxWidth:'none'
+    }:{
+      position:'absolute',top:'calc(12% + 26.018519% + 8px)',bottom:'auto',
+      left:'auto',right:'2.8%',width:'26.041667%',maxWidth:'none'
+    };
+    Object.keys(rules).forEach(function(key){
+      element.style.setProperty(key.replace(/[A-Z]/g,function(c){return '-'+c.toLowerCase();}),rules[key],'important');
+    });
     return element;
   }
   function renderNext(){
