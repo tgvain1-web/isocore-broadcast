@@ -1,0 +1,20 @@
+/* Character captions are inside the CAMERA, not above the stream. */
+#isocore-broadcast #iso-character-caption{
+ position:absolute;z-index:70;left:8%;right:8%;bottom:3.8%;
+ background:linear-gradient(100deg,rgba(3,9,18,.97),rgba(6,15,29,.89));
+ border:1px solid rgba(0,212,255,.67);border-left:5px solid #00d4ff;
+ color:#f4fbff;border-radius:9px;padding:10px 14px;
+ text-shadow:0 2px 5px #000;box-shadow:0 8px 22px #0009;
+ font:600 clamp(12px,1.4vw,20px)/1.3 "Segoe UI",Arial,sans-serif;
+ display:flex;gap:11px;align-items:start;pointer-events:none;
+}
+#isocore-broadcast #iso-character-caption[data-who="echo"]{border-color:#ff9a2e;border-left-color:#ff9a2e}
+#isocore-broadcast #iso-character-caption .iso-speaker{color:#00d4ff;white-space:nowrap;font-weight:900}
+#isocore-broadcast #iso-character-caption[data-who="echo"] .iso-speaker{color:#ffb35c}
+#isocore-broadcast #iso-character-caption .iso-words{flex:1;overflow-wrap:anywhere}
+#isocore-broadcast #iso-camera-label{top:10px;bottom:auto}
+#isocore-broadcast #iso-telemetry{position:absolute;top:10px;right:9px;z-index:71;background:#06101cde;color:#ffb45d;font:700 clamp(9px,1vw,13px)/1.3 "Segoe UI",Arial,sans-serif;padding:7px 9px;border:1px solid #ff9a2e66;border-radius:5px;max-width:62%;text-align:right;pointer-events:none}
+#isocore-broadcast .ov-follow-count{font:900 14px/1.15 "Segoe UI",Arial,sans-serif;color:#fff!important;letter-spacing:.03em;white-space:nowrap;text-shadow:0 1px 4px black}
+#isocore-broadcast .ov-e .ov-follow-count{color:#ffe0b9!important}
+#isocore-broadcast .ov-g .ov-follow-count{color:#b0f2ff!important}
+@media(max-width:640px){#isocore-broadcast #iso-character-caption{bottom:2.5%;padding:7px 9px;gap:6px;font-size:10px}}
