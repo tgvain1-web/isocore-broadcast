@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex"><title>Isocore — Ghost &amp; Echo Brain Control</title>
+<style>
+:root{color-scheme:dark;--g:#00d4ff;--e:#ff982f}*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#050a12;color:#e8f2fa;font:14px/1.45 system-ui,Arial,sans-serif}body{background:radial-gradient(ellipse at 50% 0,#102638 0%,#050a12 65%);padding:18px}main{max-width:1020px;margin:auto}h1{margin:6px 0;font-size:clamp(24px,5vw,35px)}h2{margin:0 0 10px;font-size:19px}p{color:#9eafbf}.top{margin-bottom:20px}.eyebrow{font-size:11px;letter-spacing:.17em;font-weight:800;color:var(--g)}.panel{padding:17px;border:1px solid #314658;background:#0b1523eb;border-radius:14px;margin:12px 0;box-shadow:0 8px 28px #0004}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.resident{border-top:3px solid var(--g)}.resident.echo{border-top-color:var(--e)}.actions{display:flex;flex-wrap:wrap;gap:8px;margin:13px 0}button{padding:10px 12px;border-radius:8px;background:#153149;color:#e9faff;border:1px solid #447088;font:700 13px system-ui;cursor:pointer}button:disabled{opacity:.45;cursor:default}button:hover:not(:disabled){border-color:#79e7ff}.warn{color:#ffbe84}input,textarea,select{width:100%;background:#09101c;color:#edf6fc;border:1px solid #36556d;border-radius:8px;padding:11px;font:14px system-ui}textarea{min-height:78px;resize:vertical}label{display:block;font-weight:700;font-size:12px;color:#c6d9e8;margin:10px 0 5px}.pill{font-size:12px;letter-spacing:.06em;color:#c9e4f2}.record{padding:12px;border:1px solid #33455a;border-radius:8px;background:#09101a;margin:8px 0}.record p{margin:5px 0}.record b{color:#d3f6ff}.mute{color:#90a6ba;font-size:12px}.error{color:#ff989b}.success{color:#87eac5}#statusline{min-height:22px}a{color:#a2eaff}.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}.row>*{flex:1;min-width:150px}.row button{flex:0 0 auto}.mono{font-family:ui-monospace,monospace}.small{font-size:12px;color:#92a5b7}#auth{max-width:540px}.empty{padding:16px;color:#839bb0;font-style:italic}@media(max-width:670px){.grid{grid-template-columns:1fr}body{padding:12px}} 
+</style></head>
+<body><main>
+<header class="top"><div class="eyebrow">ISOCORE // PRIVATE OPERATIONS</div><h1>Ghost &amp; Echo — The Brain</h1><p>Independent AI identities, persistent per-character memories and owner-reviewed decisions. No internal daily call quotas. Provider costs and quotas still apply.</p>
+<a href="/preview.html">Broadcast preview</a> · <a href="/brain-screen.html">Read-only broadcast screen</a> · <a href="/core-hud-preview.html">Visual core preview</a>
+</header>
+<section class="panel" id="auth"><h2>Owner access</h2><p>Enter your existing Isocore Broadcast owner control token. The page keeps it only in this browser tab's memory; it is not saved or placed in the URL.</p>
+<label for="token">CONTROL_TOKEN</label><input id="token" type="password" autocomplete="off" placeholder="Paste your private owner token">
+<div class="actions"><button id="connect">Connect securely</button><button id="disconnect">Clear access</button></div>
+<div id="statusline" role="status"></div>
+</section>
+<section id="workspace" hidden>
+<div class="panel"><h2>Important controls</h2><p><strong>Manual:</strong> Generate a private proposal whenever you want. <strong>Automatic:</strong> If explicitly enabled, the scheduled check can generate private proposals about every 15 minutes. Approvals update Isocore's brain memories and read-only broadcast display; they <em>do not</em> issue Twitch messages or move the characters in the 3D world.</p><p class="warn">Enabling automatic proposals may consume Cloudflare Workers AI quota. Ghost and Echo start disabled.</p><button id="refresh">Refresh all activity</button></div>
+<div class="grid" id="characters"></div>
+<div class="panel"><h2>Pending decisions</h2><div id="pending" class="empty">Connect to load proposals.</div></div>
+</section>
+</main>
+<script>
+(function(){
+'use strict';
+const root=document.getElementById('characters'),pending=document.getElementById('pending'),workspace=document.getElementById('workspace');
+const token=document.getElementById('token'),status=document.getElementById('statusline');
+let access='',current={};
+const $=id=>document.getElementById(id);
+function node(tag,cls,text){const n=document.createElement(tag);if(cls)n.className=cls;if(text!=null)n.textContent=String(text);return n}
+function message(txt,error){status.textContent=txt;status.className=error?'error':'success'}
+async function call(path,method='GET',body=null) {
+ if(!access)throw Error('Connect with the owner token first');
+ const r=await fetch(path,{method,headers:{'Authorization':'Bearer '+access,...(body?{'Content-Type':'application/json'}:{})},body:body?JSON.stringify(body):undefined,cache:'no-store',credentials:'omit'});
+ const data=await r.json();if(!r.ok||data.ok===false)throw Error(data.error||'Request rejected ('+r.status+')');return data;
+}
+function opt(label,handler){
+ const b=node('button','',label);b.type='button';b.addEventListener('click',async()=>{
+  b.disabled=true;try{await handler();await refresh()}catch(e){message(e.message,true)}finally{b.disabled=false}
+ });return b
+}
+async function refresh(){
+ const state=await call('/api/brain/status');current=Object.fromEntries(state.characters.map(x=>[x.who,x]));
+ root.replaceChildren();pending.replaceChildren();
+ let count=0;
+ for(const who of ['ghost','echo']){
+  const a=current[who];if(!a)continue;
+  const sec=node('section','panel resident '+who);
+  sec.appendChild(node('h2','',who.toUpperCase()+' — '+(a.enabled?'ENABLED':'DISABLED')));
+  sec.appendChild(node('p','pill','MODE: '+(a.automatic?'AUTOMATIC DRAFTS':a.enabled?'MANUAL ONLY':'OFF')+' · '+(a.thinking?'THINKING':'IDLE')+' · '+a.pending+' PENDING'));
+  sec.appendChild(node('p','small','Approved location: '+a.place+' · Mood: '+a.mood));
+  const acts=node('div','actions');
+  acts.appendChild(opt(a.enabled?'Disable brain':'Enable manual brain',async()=>{
+   await call('/api/brain/enable','POST',{who,enabled:!a.enabled,automatic:false});
+  }));
+  acts.appendChild(opt(a.automatic?'Stop scheduled proposals':'Allow scheduled proposals',async()=>{
+   if(!a.automatic&&!confirm('Scheduled AI proposals can use provider quota. Enable for '+who+'?'))return;
+   await call('/api/brain/enable','POST',{who,enabled:true,automatic:!a.automatic});
+  }));
+  sec.appendChild(acts);
+  const label=node('label','',who+' — current observation (not an instruction)');sec.appendChild(label);
+  const observation=node('textarea');observation.placeholder=who==='ghost'?'Example: Planning a gaming broadcast and looking around the studio.':'Example: Reviewing a race session and choosing what to practice.';sec.appendChild(observation);
+  sec.appendChild(opt('Generate private decision',async()=>{
+   message('Generating a proposal for '+who+'…',false);
+   const r=await call('/api/brain/think','POST',{who,observation:observation.value});
+   message('Private decision created for '+who+'. Review below.',false);
+  }));
+  const memLabel=node('label','',who+' — add a verified memory');sec.appendChild(memLabel);
+  const mem=node('textarea');mem.placeholder='A true, non-sensitive event you want this character to remember.';sec.appendChild(mem);
+  sec.appendChild(opt('Save verified memory',async()=>{
+   await call('/api/brain/remember','POST',{who,text:mem.value});mem.value='';message('Memory saved for '+who,false);
+  }));
+  root.appendChild(sec);
+  const h=await call('/api/brain/history?who='+who);
+  for(const d of h.history||[]){
+   if(d.status!=='draft')continue;count++;
+   const record=node('article','record');
+   record.appendChild(node('b','',who.toUpperCase()+' #'+d.id+' · '+d.action+' / '+d.place+' / '+d.mood));
+   record.appendChild(node('p','',d.line));
+   record.appendChild(node('p','mute','Proposed memory: '+d.memory));
+   record.appendChild(node('p','mute','Source: '+d.origin+' · Has NOT been performed'));
+   const buttons=node('div','actions');
+   buttons.appendChild(opt('Approve to memory / display',async()=>{await call('/api/brain/review','POST',{id:d.id,approve:true});message('Approved decision #'+d.id+' for '+who,false)}));
+   buttons.appendChild(opt('Reject',async()=>{await call('/api/brain/review','POST',{id:d.id,approve:false});message('Rejected decision #'+d.id,false)}));
+   record.appendChild(buttons);pending.appendChild(record);
+  }
+ }
+ if(!count)pending.appendChild(node('div','empty','No proposals awaiting approval.'));
+}
+$('connect').addEventListener('click',async()=>{
+  access=token.value.trim();
+  if(!access)return message('Enter your owner token.',true);
+  try{await refresh();workspace.hidden=false;message('Connected to Isocore brain controls.',false);token.value=''}
+  catch(e){access='';workspace.hidden=true;message('Connection failed: '+e.message,true)}
+});
+$('disconnect').addEventListener('click',()=>{access='';token.value='';workspace.hidden=true;message('Owner access cleared.',false)});
+$('refresh').addEventListener('click',()=>refresh().catch(e=>message(e.message,true)));
+})();
+</script>
+</body></html>
