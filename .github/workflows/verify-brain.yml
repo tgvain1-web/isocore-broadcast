@@ -1,0 +1,51 @@
+name: Verify Ghost and Echo Brain
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/verify-brain.yml'
+      - 'src/brain.mjs'
+      - 'src/chat-bot.mjs'
+      - 'src/worker.mjs'
+      - 'tests/brain.test.mjs'
+      - 'public/brain-console.html'
+      - 'public/brain-screen.html'
+      - 'wrangler.jsonc'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  brain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate Worker scripts and brain tests
+        run: |
+          node --check src/brain.mjs
+          node --check src/worker.mjs
+          node --check src/chat-bot.mjs
+          node --test tests/brain.test.mjs tests/worker.test.mjs
+      - name: Verify private control and public-safe status boundaries
+        run: |
+          node --input-type=module <<'JS'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          const worker=fs.readFileSync('src/worker.mjs','utf8');
+          const brain=fs.readFileSync('src/brain.mjs','utf8');
+          const owner=fs.readFileSync('public/brain-console.html','utf8');
+          const screen=fs.readFileSync('public/brain-screen.html','utf8');
+          assert.match(worker,/path==='\/api\/brain\/status'/);
+          assert.match(worker,/authorized\(request,env.CONTROL_TOKEN\)/);
+          assert.match(worker,/path==='\/api\/brain\/public'/);
+          assert.match(brain,/status='draft'/);
+          assert.match(brain,/world_action_executed:false/);
+          assert.doesNotMatch(brain,/DAILY_LIMIT|COOLDOWN|max_calls_per_day/);
+          assert.match(owner,/type="password"/);
+          assert.match(screen,/api\/brain\/public/);
+          assert.doesNotMatch(screen,/CONTROL_TOKEN/);
+          console.log('Brain controls, approval boundary, and public screen checks pass.');
+          JS
