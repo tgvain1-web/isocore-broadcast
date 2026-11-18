@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex"><title>Isocore — Ghost and Echo Activity Screen</title>
+<link rel="stylesheet" href="/assets/isocore-core-hud.css">
+<style>
+*{box-sizing:border-box}html,body{margin:0;overflow:hidden;background:transparent;font-family:Arial,sans-serif;color:#fff}
+main{width:100vw;height:100dvh;position:relative;pointer-events:none}
+#screen{position:absolute;left:2.1%;right:2.1%;bottom:3.5%;max-width:920px;margin:auto}
+.ic-hud{gap:10px}
+.ic-entity{min-height:152px;padding:10px 13px;border-radius:12px;background:linear-gradient(135deg,#071422e8,#091522ed);box-shadow:0 5px 20px #0008;display:grid;grid-template-columns:76px 1fr;grid-template-rows:auto auto auto;gap:0 10px}
+.ic-heading{grid-column:2;align-self:end}
+.ic-name{font-size:15px}.ic-role{font-size:8px;letter-spacing:.08em}
+.ic-core{grid-row:1 / 4;grid-column:1;width:68px;height:68px;margin:24px auto 0;align-self:start}
+.ic-status{grid-column:2;align-items:flex-start;text-align:left;min-height:32px}
+.ic-state{font-size:11px}.ic-detail{font-size:9px}
+.ic-meter{grid-column:2;justify-content:start;margin:5px 0 0;height:18px}
+.ic-bar{width:5px}
+.update{display:block;color:#a5bdd0;font-size:9px;line-height:1.25;letter-spacing:.05em;margin-top:4px;max-width:330px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#connection{position:absolute;bottom:2px;right:3%;font:10px monospace;color:#8699a6}
+@media(max-width:600px){.ic-hud{grid-template-columns:1fr}.ic-entity{min-height:120px}.ic-core{margin-top:11px}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important}}
+</style></head>
+<body><main><div id="screen"></div><div id="connection" aria-live="polite"></div></main>
+<script src="/assets/isocore-core-hud.js"></script>
+<script>
+(function(){
+'use strict';
+const hud=window.IsocoreCoreHUD;hud.mount(document.getElementById('screen'));
+const notes={ghost:'NO APPROVED ACTIVITY YET',echo:'NO APPROVED ACTIVITY YET'};
+const last={ghost:0,echo:0},refs={};
+function updateLabel(who){
+ const card=document.querySelector('.ic-entity.ic-'+who);
+ if(!card)return;
+ let tag=refs[who];if(!tag){tag=document.createElement('small');tag.className='update';card.querySelector('.ic-status').appendChild(tag);refs[who]=tag}
+ tag.textContent=notes[who];
+}
+function read(){
+ fetch('/api/brain/public',{cache:'no-store',credentials:'omit'})
+ .then(r=>r.ok?r.json():null).then(data=>{
+  if(!data||!data.ok)return;
+  ['ghost','echo'].forEach(who=>{
+   const item=data[who];
+   if(item && item.at!==last[who]){
+     last[who]=item.at;
+     notes[who]='APPROVED PLAN: '+String(item.action).toUpperCase()+' · '+String(item.place).toUpperCase();
+     // An approved thought is not the same as a spoken line or executed action.
+     hud.setState(who,'standby',{detail:'LATEST REVIEWED DECISION'});
+   }
+   updateLabel(who);
+  });
+  document.getElementById('connection').textContent='';
+ }).catch(()=>{document.getElementById('connection').textContent='STATUS UNAVAILABLE'});
+}
+read();setInterval(read,15000);
+})();
+</script></body></html>
