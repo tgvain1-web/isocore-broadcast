@@ -3,6 +3,7 @@
  * Twitch-signed EventSub message. No stream keys, Discord credentials or OAuth secrets in source.
  */
 import {chatStatus,startChatOAuth,finishChatOAuth,chatOwnerAction,chatLatest,maybeAnswerChat,revokeChatSubscription,confirmChatSubscription} from './chat-bot.mjs';
+import {brainStatus,brainHistory,brainPublic,brainEnabled,remember,brainDecide,reviewDecision,brainScheduled} from './brain.mjs';
 const SHOTS = new Set(['first', 'shoulder', 'side', 'wide', 'high']);
 const WHO = new Set(['ghost','echo']);
 const publicHeaders = {
@@ -205,6 +206,17 @@ async function api(request,env,path){
   if(request.method==='GET'){
     if(path==='/api/health')return answer({ok:true,service:'isocore-broadcast',database:'ready'});
     if(path==='/api/chat/latest')return answer(await chatLatest(db));
+    if(path==='/api/brain/public')return answer(await brainPublic(db));
+    if(path==='/api/brain/status'){
+      if(!authorized(request,env.CONTROL_TOKEN))return fail('Owner authorization required',403);
+      return answer(await brainStatus(db));
+    }
+    if(path==='/api/brain/history'){
+      if(!authorized(request,env.CONTROL_TOKEN))return fail('Owner authorization required',403);
+      const who=new URL(request.url).searchParams.get('who')||'';
+      const result=await brainHistory(db,who);
+      return answer(result,result.ok?200:400);
+    }
     if(path==='/api/chat/status'){
       if(!authorized(request,env.CONTROL_TOKEN))return fail('Owner authorization required',403);
       return answer(await chatStatus(env,db));
@@ -219,7 +231,23 @@ async function api(request,env,path){
   if(request.method!=='POST')return fail('Method not allowed',405);
   if(!authorized(request,env.CONTROL_TOKEN))return fail('Owner authorization required',403);
   let data;try{data=await bodyJSON(request);}catch{return fail('Invalid JSON or oversized payload');}
-  if(path==='/api/chat/connect')return answer(await startChatOAuth(env,db));
+  if(path==='/api/brain/enable'){
+     const result=await brainEnabled(db,data.who,data.enabled,data.automatic===true);
+     return answer(result,result.ok?200:400);
+   }
+   if(path==='/api/brain/remember'){
+     const result=await remember(db,data.who,data.text);
+     return answer(result,result.ok?200:400);
+   }
+   if(path==='/api/brain/think'){
+     const result=await brainDecide(db,env,data.who,data.observation||'', 'owner',data.game||'');
+     return answer(result,result.ok?200:result.error==='Workers AI is not configured'?503:400);
+   }
+   if(path==='/api/brain/review'){
+     const result=await reviewDecision(db,data.id,data.approve);
+     return answer(result,result.ok?200:400);
+   }
+   if(path==='/api/chat/connect')return answer(await startChatOAuth(env,db));
   if(['/api/chat/enable','/api/chat/disable','/api/chat/subscribe'].includes(path))
     return answer(await chatOwnerAction(path,data,env,db,twitchAppAccessToken));
   if(path==='/api/game'){
@@ -258,6 +286,11 @@ async function api(request,env,path){
   return fail('Unknown endpoint',404);
 }
 export default {
+  async scheduled(event,env,ctx) {
+    // No AI usage unless the owner explicitly enables automatic draft proposals.
+    try { await brainScheduled(env); }
+    catch(e) { console.warn('[ISOCORE] Brain schedule unavailable',e?.message||'error'); }
+  },
   async fetch(request,env,ctx){
     const url=new URL(request.url);const path=url.pathname;
     if(path==='/oauth/twitch/callback'){
