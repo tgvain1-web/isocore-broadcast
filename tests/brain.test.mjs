@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {validateDecision,parseDecision,makePrompt} from '../src/brain.mjs';
 
-const ghost={action:'explore',place:'concourse',mood:'curious',line:'I will look around the public concourse.',memory:'I plan to learn more about the arena tomorrow.'};
+const ghost={action:'explore',place:'station',mood:'curious',line:'I will look around the public concourse.',memory:'I plan to learn more about the arena tomorrow.'};
 const echo={action:'practice',place:'simrig',mood:'focused',line:'I would like to practise some clean racing lines.',memory:'I want to improve my consistency.'};
 
 test('Ghost and Echo retain separate allowed spaces',()=>{
