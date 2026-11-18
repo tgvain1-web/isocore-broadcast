@@ -14,6 +14,7 @@ const PLACES = {
   echo:new Set(['simrig','paddock','stage','concourse','ghost-station','rest'])
 };
 const now = () => Math.floor(Date.now()/1000);
+let brainSchemaReady=false;
 const clean = (value,max=180) => String(value??'').replace(/[\u0000-\u001f\u007f]/g,' ').replace(/\s+/g,' ').trim().slice(0,max);
 const validWho = who => WHO.has(who);
 export function validateDecision(who,raw) {
@@ -48,6 +49,7 @@ export function makePrompt(who,observation,memories=[],game='') {
   };
 }
 export async function brainTables(db) {
+  if(brainSchemaReady)return;
   await db.prepare("CREATE TABLE IF NOT EXISTS brain_agents (who TEXT PRIMARY KEY,enabled INTEGER NOT NULL DEFAULT 0,auto_enabled INTEGER NOT NULL DEFAULT 0,thinking_at INTEGER NOT NULL DEFAULT 0,mood TEXT NOT NULL DEFAULT 'calm',place TEXT NOT NULL DEFAULT 'rest',updated_at INTEGER NOT NULL DEFAULT 0)").run();
   await db.prepare("INSERT OR IGNORE INTO brain_agents (who) VALUES ('ghost'),('echo')").run();
   await db.prepare("CREATE TABLE IF NOT EXISTS brain_memories (id INTEGER PRIMARY KEY AUTOINCREMENT,who TEXT NOT NULL,source TEXT NOT NULL,content TEXT NOT NULL,created_at INTEGER NOT NULL)").run();
@@ -55,6 +57,7 @@ export async function brainTables(db) {
   await db.prepare("CREATE TABLE IF NOT EXISTS brain_decisions (id INTEGER PRIMARY KEY AUTOINCREMENT,who TEXT NOT NULL,created_at INTEGER NOT NULL,action TEXT NOT NULL,place TEXT NOT NULL,mood TEXT NOT NULL,line TEXT NOT NULL,memory TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'draft',origin TEXT NOT NULL DEFAULT 'owner',reviewed_at INTEGER NOT NULL DEFAULT 0)").run();
   await db.prepare("CREATE INDEX IF NOT EXISTS brain_decisions_who_at ON brain_decisions(who,id DESC)").run();
   await db.prepare("CREATE INDEX IF NOT EXISTS brain_decisions_status ON brain_decisions(status,id DESC)").run();
+  brainSchemaReady=true;
 }
 export async function brainStatus(db) {
   await brainTables(db);
