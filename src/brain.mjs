@@ -5,7 +5,7 @@
  * Decisions remain drafts until an authorised owner approves them.
  * Never performs Twitch/Discord/world writes.
  */
-const MODEL = '@cf/meta/llama-3.1-8b-instruct';
+const MODEL = '@cf/meta/llama-3.1-8b-instruct-fp8-fast';
 const WHO = new Set(['ghost','echo']);
 const ACTIONS = new Set(['observe','explore','practice','socialize','reflect','rest']);
 const MOODS = new Set(['calm','curious','focused','excited','playful','tired']);
