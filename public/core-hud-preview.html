@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Isocore — AI Core Interface Prototype</title>
+<link rel="stylesheet" href="/assets/isocore-core-hud.css">
+<style>
+  *{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#050914;color:#dcecff;font:14px/1.5 Arial,sans-serif}
+  body{background:radial-gradient(circle at 50% -8%,#142f46 0,#050914 61%);padding:clamp(16px,5vw,42px)}
+  main{max-width:1010px;margin:auto}h1{font-size:clamp(24px,5vw,37px);letter-spacing:.04em;margin:2px 0 8px}
+  .sub{color:#93aabe;max-width:720px}.tag{color:#00d4ff;letter-spacing:.18em;font-size:11px;font-weight:800}
+  #core-mount{margin-top:24px}
+  .tools{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:20px;padding:16px;border:1px solid #345063;border-radius:12px;background:#0b1321}
+  button{background:#152337;color:#eaf6fc;border:1px solid #496c82;border-radius:8px;padding:11px 14px;cursor:pointer;font-weight:bold}
+  button:focus-visible{outline:2px solid #fff}
+  button:hover{border-color:#00d4ff}
+  .note{margin-top:18px;color:#8fa0b5;font-size:12px}
+  a{color:#9ceaff}
+</style>
+</head>
+<body>
+<main>
+  <div class="tag">ISOCORE // ORIGINAL AI INTERFACE PROTOTYPE</div>
+  <h1>Two personalities. Two living cores.</h1>
+  <p class="sub">This is an independent Isocore design, not MIRA-HUD code. Both cores remain in STANDBY until a real activity event arrives. The controls below are a clearly marked visual test only.</p>
+  <div id="core-mount"></div>
+  <div class="tools">
+    <strong>Visual test:</strong>
+    <button type="button" data-who="ghost" data-mode="listening">Ghost listens</button>
+    <button type="button" data-who="ghost" data-mode="processing">Ghost processes</button>
+    <button type="button" data-who="ghost" data-mode="responding">Ghost responds</button>
+    <button type="button" data-who="echo" data-mode="listening">Echo listens</button>
+    <button type="button" data-who="echo" data-mode="processing">Echo processes</button>
+    <button type="button" data-who="echo" data-mode="responding">Echo responds</button>
+    <button type="button" id="reset">Reset both</button>
+  </div>
+  <p class="note">The current broadcast already emits real <code>isocore:dialogue</code> events for game commentary and sent Twitch replies; those map to <strong>RESPONDING</strong>, not audible speaking. Future microphone, processing and voice signals can use <code>isocore:ai-state</code> and <code>isocore:ai-energy</code> once they actually exist. The on-air layout is unchanged. <a href="/preview.html">Back to broadcast preview</a>.</p>
+</main>
+<script src="/assets/isocore-core-hud.js"></script>
+<script>
+(function(){
+  var hud=window.IsocoreCoreHUD;
+  hud.mount(document.getElementById('core-mount'));
+  document.querySelectorAll('[data-who][data-mode]').forEach(function(btn){
+    btn.addEventListener('click',function(){hud.setState(btn.dataset.who,btn.dataset.mode,{detail:'MANUAL VISUAL TEST',duration:6000});});
+  });
+  document.getElementById('reset').addEventListener('click',function(){
+    hud.setState('ghost','standby');hud.setState('echo','standby');
+  });
+})();
+</script>
+</body>
+</html>
