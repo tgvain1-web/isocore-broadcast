@@ -49,3 +49,34 @@ jobs:
           assert.doesNotMatch(screen,/CONTROL_TOKEN/);
           console.log('Brain controls, approval boundary, and public screen checks pass.');
           JS
+
+      - name: Verify Cloudflare has published the new brain pages and owner gating
+        run: |
+          python3 - <<'PY'
+          import json,time,urllib.request,urllib.error
+          base='https://isocore-broadcast.tgvain1.workers.dev'
+          def check(path):
+              req=urllib.request.Request(base+path,headers={'User-Agent':'Isocore-Brain-Deployment-Check','Cache-Control':'no-cache'})
+              try:
+                  with urllib.request.urlopen(req,timeout=14) as r:
+                      return r.status,r.read(10000).decode('utf-8','replace')
+              except urllib.error.HTTPError as e:
+                  return e.code,e.read(2000).decode('utf-8','replace')
+          for attempt in range(6):
+              a,html=check('/brain-console.html')
+              b,display=check('/brain-screen.html')
+              c,public=check('/api/brain/public')
+              d,private=check('/api/brain/status')
+              try: data=json.loads(public)
+              except ValueError: data={}
+              ok=(a==200 and 'Ghost &amp; Echo — The Brain' in html and
+                  b==200 and 'api/brain/public' in display and
+                  c==200 and data.get('ok') is True and
+                  d==403 and 'Owner authorization required' in private)
+              print('Attempt',attempt+1,'console',a,'screen',b,'public',c,'private',d,'PASSED' if ok else 'NOT DEPLOYED YET')
+              if ok: break
+              time.sleep(10)
+          else:
+              raise SystemExit('Cloudflare brain deployment not verified. Code tests passed but check Worker GitHub deployment.')
+          PY
+
