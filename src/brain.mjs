@@ -72,6 +72,14 @@ export async function brainPublic(db) {
   for(const r of rows.results||[])if(validWho(r.who)&&!latest[r.who])latest[r.who]={action:r.action,place:r.place,mood:r.mood,line:r.line,at:r.reviewed_at};
   return {ok:true,ghost:latest.ghost,echo:latest.echo};
 }
+export async function brainChatContext(db,who) {
+  if(!validWho(who))return [];
+  await brainTables(db);
+  const agent=await db.prepare('SELECT enabled FROM brain_agents WHERE who=?').bind(who).first();
+  if(!agent?.enabled)return [];
+  const notes=await db.prepare('SELECT content FROM brain_memories WHERE who=? ORDER BY id DESC LIMIT 6').bind(who).all();
+  return (notes.results||[]).map(r=>clean(r.content,180));
+}
 export async function brainHistory(db,who) {
   if(!validWho(who))return {ok:false,error:'Invalid resident'};
   await brainTables(db);
