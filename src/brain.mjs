@@ -77,7 +77,7 @@ export async function brainChatContext(db,who) {
   await brainTables(db);
   const agent=await db.prepare('SELECT enabled FROM brain_agents WHERE who=?').bind(who).first();
   if(!agent?.enabled)return [];
-  const notes=await db.prepare('SELECT content FROM brain_memories WHERE who=? ORDER BY id DESC LIMIT 6').bind(who).all();
+  const notes=await db.prepare("SELECT content FROM brain_memories WHERE who=? AND source='approved' ORDER BY id DESC LIMIT 6").bind(who).all();
   return (notes.results||[]).map(r=>clean(r.content,180));
 }
 export async function brainHistory(db,who) {
