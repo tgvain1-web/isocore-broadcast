@@ -6,7 +6,7 @@
 import {brainChatContext} from './brain.mjs';
 const REDIRECT = 'https://isocore-broadcast.tgvain1.workers.dev/oauth/twitch/callback';
 const API = 'https://api.twitch.tv/helix';
-const MODEL = '@cf/meta/llama-3.1-8b-instruct';
+const MODEL = '@cf/meta/llama-3.1-8b-instruct-fp8-fast';
 const ttl = () => Math.floor(Date.now() / 1000);
 const enc = new TextEncoder();
 const dec = new TextDecoder();
