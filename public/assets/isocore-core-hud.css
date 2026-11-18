@@ -1,0 +1,30 @@
+/* Original Isocore Core HUD, 2026. No third-party HUD components or external assets. */
+.ic-hud{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(12px,2vw,28px);color:#eaf6fc;font-family:Arial,Helvetica,sans-serif}
+.ic-entity{--ic-accent:#00d4ff;--ic-light:#a1f5ff;--ic-energy:0;position:relative;min-width:0;min-height:345px;padding:24px 22px 20px;overflow:hidden;border:1px solid color-mix(in srgb,var(--ic-accent) 40%,#4d5564);border-radius:18px;background:radial-gradient(ellipse 80% 55% at 50% 42%,color-mix(in srgb,var(--ic-accent) 13%,transparent),transparent 75%),linear-gradient(160deg,#101b2a,#090d16 72%);box-shadow:inset 0 1px 0 #ffffff16,0 20px 45px #0008}
+.ic-entity.ic-echo{--ic-accent:#ff982f;--ic-light:#ffcf8a}
+.ic-entity:before{content:'';position:absolute;inset:0;pointer-events:none;opacity:.18;background-image:linear-gradient(#ffffff07 1px,transparent 1px),linear-gradient(90deg,#ffffff07 1px,transparent 1px);background-size:24px 24px}
+.ic-heading{position:relative;z-index:1;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.ic-name{font-size:clamp(17px,3vw,24px);font-weight:900;letter-spacing:.14em;color:var(--ic-light)}
+.ic-role{font-size:10px;letter-spacing:.18em;font-weight:700;color:#9eabbc}
+.ic-core{position:relative;width:min(58%,215px);max-width:215px;aspect-ratio:1;margin:22px auto 18px;isolation:isolate;filter:drop-shadow(0 0 calc(7px + 15px * var(--ic-energy)) color-mix(in srgb,var(--ic-accent) 55%,transparent));transition:filter .4s}
+.ic-orbit,.ic-heart,.ic-scan{position:absolute;border-radius:50%}
+.ic-orbit-outer{inset:1%;border:2px solid color-mix(in srgb,var(--ic-accent) 58%,#283346);border-left-color:transparent;border-right-color:var(--ic-light);box-shadow:inset 0 0 22px #000d,0 0 15px color-mix(in srgb,var(--ic-accent) 20%,transparent)}
+.ic-orbit-inner{inset:16%;border:12px double color-mix(in srgb,var(--ic-accent) 70%,#182030);border-top-color:var(--ic-light);border-bottom-color:transparent;box-shadow:0 0 9px color-mix(in srgb,var(--ic-accent) 30%,transparent)}
+.ic-heart{inset:31%;background:radial-gradient(circle at 40% 35%,#fff 0%,var(--ic-light) 9%,var(--ic-accent) 28%,color-mix(in srgb,var(--ic-accent) 36%,#071221) 59%,#070d16 76%);border:1px solid var(--ic-accent);box-shadow:0 0 calc(8px + 28px * var(--ic-energy)) color-mix(in srgb,var(--ic-accent) 55%,transparent),inset 0 0 22px #fff3}
+.ic-scan{inset:4%;border:1px dashed color-mix(in srgb,var(--ic-accent) 28%,transparent)}
+.ic-status{display:flex;flex-direction:column;align-items:center;gap:7px;text-align:center;position:relative;z-index:1;min-height:44px}
+.ic-state{letter-spacing:.24em;font-size:13px;color:var(--ic-light)}
+.ic-detail{font-size:10px;letter-spacing:.12em;color:#8396aa}
+.ic-meter{display:flex;gap:5px;justify-content:center;align-items:flex-end;height:26px;margin:16px auto 0}
+.ic-bar{width:7px;height:calc(5px + 20px * var(--ic-energy));border-radius:2px;background:var(--ic-accent);opacity:calc(.17 + .8 * var(--ic-energy));box-shadow:0 0 8px color-mix(in srgb,var(--ic-accent) 45%,transparent);transition:height .24s,opacity .24s}
+.ic-bar:nth-child(3n){height:calc(5px + 14px * var(--ic-energy))}
+.ic-bar:nth-child(4n){height:calc(5px + 11px * var(--ic-energy))}
+.ic-entity[data-state='listening'] .ic-orbit-outer{animation:ic-orbit 5s linear infinite}
+.ic-entity[data-state='processing'] .ic-orbit-outer{animation:ic-orbit 2.8s linear infinite}
+.ic-entity[data-state='processing'] .ic-orbit-inner{animation:ic-orbit 3.4s linear infinite reverse}
+.ic-entity[data-state='responding'] .ic-heart,.ic-entity[data-state='speaking'] .ic-heart{animation:ic-beat 1.25s ease-in-out infinite}
+.ic-entity[data-state='offline']{filter:grayscale(.8);opacity:.65}
+@keyframes ic-orbit{to{transform:rotate(360deg)}}
+@keyframes ic-beat{50%{transform:scale(1.085)}}
+@media(max-width:620px){.ic-hud{grid-template-columns:1fr}.ic-entity{min-height:320px}.ic-core{width:175px;margin-top:14px;margin-bottom:12px}}
+@media(prefers-reduced-motion:reduce){.ic-hud *, .ic-hud *:before, .ic-hud *:after{animation:none!important;transition:none!important}}
