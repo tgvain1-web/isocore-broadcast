@@ -38,5 +38,5 @@ test('Truncates untrusted observations and memories',()=>{
 });
 test('No artificial daily-call or response allowance in agent prompts',()=>{
   const prompt=makePrompt('ghost','Explore');
-  assert.doesNotMatch(prompt.system+/max_calls_per_day|daily quota|15.minute cooldown/i);
+  assert.doesNotMatch(prompt.system,/max_calls_per_day|daily quota|15.minute cooldown/i);
 });
