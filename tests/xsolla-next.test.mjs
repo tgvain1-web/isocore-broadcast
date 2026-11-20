@@ -10,7 +10,7 @@ test('Xsolla preview has 4 selectable cameras',()=>{
  assert.match(html,/id="isocore-broadcast"/);
 });
 test('Xsolla preview isolated from live Vain overlay',()=>{
- assert.match(css,/isocore-review/);
+ assert.match(css,/#iso-review/);
  assert.match(js,/isocore-next-world/);
  assert.doesNotMatch(js,/CONTROL_TOKEN|TWITCH_CLIENT_SECRET/);
  assert.doesNotMatch(js,/api\/state|isocore-login-worker/);
