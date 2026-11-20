@@ -1,0 +1,35 @@
+name: Validate proposed Broadcast changes
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  validate:
+    name: Broadcast PR checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check JavaScript syntax
+        run: |
+          node --check src/worker.mjs
+          node --check src/brain.mjs
+          node --check src/chat-bot.mjs
+          node --check public/assets/bridge.js
+          node --check public/assets/ig-ghost-world-xsolla.js
+      - name: Check Wrangler project identity
+        run: |
+          node --input-type=module <<'JS'
+          import {readFileSync} from 'node:fs';
+          import assert from 'node:assert/strict';
+          const cfg=JSON.parse(readFileSync('wrangler.jsonc','utf8'));
+          assert.equal(cfg.name,'isocore-broadcast');
+          assert.equal(cfg.main,'src/worker.mjs');
+          assert.equal(cfg.d1_databases?.[0]?.binding,'DB');
+          JS
+      - name: Run existing unit tests
+        run: node --test tests/*.test.mjs
