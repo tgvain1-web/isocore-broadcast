@@ -7,6 +7,8 @@ on:
       - 'public/assets/bridge-next.js'
       - 'public/preview-next.html'
       - 'tests/next-world.test.mjs'
+      - 'tests/xsolla-next.test.mjs'
+      - 'public/xsolla-next/**'
       - '.github/workflows/verify-next-world.yml'
   workflow_dispatch:
 permissions:
@@ -24,5 +26,7 @@ jobs:
         run: |
           node --check public/assets/ig-ghost-world-next.js
           node --check public/assets/bridge-next.js
-      - name: Verify compressed GLB geometry and isolation
-        run: node --test tests/next-world.test.mjs
+      - name: Validate review Xsolla JavaScript
+        run: node --check --input-type=commonjs < public/xsolla-next/03-JAVASCRIPT.txt
+      - name: Verify model assets and Xsolla isolation
+        run: node --test tests/next-world.test.mjs tests/xsolla-next.test.mjs
