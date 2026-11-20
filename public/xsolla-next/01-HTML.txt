@@ -1,0 +1,3 @@
+<!-- ISOCORE FINISHED 3D REVIEW — Xsolla separate hidden Code layer -->
+<!-- ISOCORE BROADCAST / XSOLLA HTML -->
+<div id="isocore-broadcast" aria-label="Isocore live PS5 broadcast overlay"></div>

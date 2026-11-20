@@ -1,0 +1,53 @@
+/* REVIEW ONLY: deploy finished 3D models to a preview Worker before publishing in Xsolla. */
+/* ISOCORE BROADCAST — COMPLETE XSOLLA JAVASCRIPT
+   Clean live edition. CSS controls the 500x281 camera.
+   No temporary CAMERA READY panel.
+*/
+(function () {
+  'use strict';
+  var HOST = 'https://isocore-broadcast.tgvain1.workers.dev';
+  var VERSION = '20';
+
+  function load(file) {
+    return new Promise(function (resolve, reject) {
+      var script = document.createElement('script');
+      script.src = HOST + '/assets/' + file + '?v=' + VERSION;
+      // Classic scripts: do not force anonymous CORS mode.
+      script.onload = resolve;
+      script.onerror = function () {
+        reject(new Error('Isocore could not load ' + file));
+      };
+      document.head.appendChild(script);
+    });
+  }
+
+  function boot() {
+    var root = document.getElementById('isocore-broadcast');
+    if (!root) {
+      console.error('[ISOCORE] HTML container missing');
+      return;
+    }
+    if (root.dataset.xsollaBooted === '1') return;
+    root.dataset.xsollaBooted = '1';
+    document.body.classList.add('isocore-lightstream', 'isocore-next-world');
+
+    load('stage.js')
+      .then(function () { return load('overlay-stage.js'); })
+      .then(function () {
+        return load('lightstream-dialogue.js').catch(function () {
+          console.warn('[ISOCORE] Optional captions unavailable');
+        });
+      })
+      .then(function () { return load('bridge-next.js'); })
+      .catch(function (error) {
+        console.error('[ISOCORE]', error);
+        root.dataset.loadError = error.message;
+      });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot, { once: true });
+  } else {
+    boot();
+  }
+})();
