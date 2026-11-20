@@ -1,0 +1,28 @@
+name: Verify next-generation 3D world review
+on:
+  pull_request:
+    paths:
+      - 'public/assets/models/next/**'
+      - 'public/assets/ig-ghost-world-next.js'
+      - 'public/assets/bridge-next.js'
+      - 'public/preview-next.html'
+      - 'tests/next-world.test.mjs'
+      - '.github/workflows/verify-next-world.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check syntax of the independent review engine
+        run: |
+          node --check public/assets/ig-ghost-world-next.js
+          node --check public/assets/bridge-next.js
+      - name: Verify compressed GLB geometry and isolation
+        run: node --test tests/next-world.test.mjs
