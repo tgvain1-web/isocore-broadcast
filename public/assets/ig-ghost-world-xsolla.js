@@ -31,7 +31,7 @@
   try { world.streets = streetList(JSON.parse(stage.dataset.streets || '[]')); } catch (e) { world.streets = []; }
   try { world.extra = JSON.parse(stage.dataset.extra || '{}') || {}; } catch (e) { world.extra = {}; }
   // real 3D models the Owner has added (assets/models/<name>.glb); the number is the file's date, so a new file is fetched afresh
-  world.models = {}; String(stage.dataset.models || '').split(',').forEach(function (p) { var m = /^([a-z-]+):(\d+)$/.exec(p.trim()); if (m) world.models[m[1]] = ISOCORE_ASSET_BASE + 'assets/models/' + m[1] + '.glb?v=' + m[2]; });
+  world.models = {}; String(stage.dataset.models || '').split(',').forEach(function (p) { var m = /^([a-z-]+):(\d+)$/.exec(p.trim()); if (m) world.models[m[1]] = ISOCORE_ASSET_BASE + 'assets/models/' + m[1] + '.glb?v=' + m[2] + '&pack=4e18a80cc8c460e7'; });
   function sidePair(a, b) { return { i: Math.max(0, Math.min(2000, Number(a) || 0)), g: Math.max(0, Math.min(2000, Number(b) || 0)) }; }
   var sd = String(stage.dataset.sides || '').split(','); world.sides = sidePair(sd[0], sd[1]);
   stage.tabIndex = 0;
@@ -767,15 +767,83 @@
     // the centre-hung screen: four faces with the score between the two sides, hung on cables from the truss
     var jumbo = new T.Group(); jumbo.position.set(0, 15.5, 6.0); scene.add(jumbo);
     var jCv = document.createElement('canvas'); jCv.width = 512; jCv.height = 256; var jTex = new T.CanvasTexture(jCv); jTex.colorSpace = T.SRGBColorSpace;
-    var jCv2 = document.createElement('canvas'); jCv2.width = 512; jCv2.height = 256; var jTex2 = new T.CanvasTexture(jCv2); jTex2.colorSpace = T.SRGBColorSpace;
+    var arenaJumboCv = document.createElement('canvas');
+    arenaJumboCv.width = 1024; arenaJumboCv.height = 536;
+    var arenaJumboTex = new T.CanvasTexture(arenaJumboCv);
+    arenaJumboTex.colorSpace = T.SRGBColorSpace;
+    function arenaJumboPanes() {
+      var channels = ['ghost','echo'].map(function (side) {
+        return { side: side, stream: sideStream(side) };
+      }).filter(function (item) { return !!item.stream; });
+      if (channels.length === 2 && channels[0].stream.login.toLowerCase() === channels[1].stream.login.toLowerCase()) {
+        var activeSide = (typeof inSuite !== 'undefined' && inSuite) || (world.extra || {}).onair;
+        channels = [channels[activeSide === 'echo' ? 1 : 0]];
+      }
+      return channels.map(function (item,index) {
+        item.u = channels.length === 1 ? [.034,.966] : index === 0 ? [.020,.491] : [.509,.980];
+        item.v = channels.length === 1 ? [0,1] : [.223,.729];
+        return item;
+      });
+    }
+    function drawArenaJumbo() {
+      var W = arenaJumboCv.width, H = arenaJumboCv.height, g = arenaJumboCv.getContext('2d');
+      var panes = arenaJumboPanes();
+      g.fillStyle = '#071422'; g.fillRect(0,0,W,H);
+      if (!panes.length) {
+        g.save(); g.scale(W/512,H/256);
+        g.textBaseline = 'alphabetic';
+        drawBrand(g,jLast[0],jLast[1]);
+        if (Date.now() < welcomeUntil) drawWelcome(g);
+        g.restore(); arenaJumboTex.needsUpdate = true;
+        return;
+      }
+      panes.forEach(function (pane) {
+        var sm = pane.stream, ghost = pane.side === 'ghost', col = ghost ? '#4fc8f5' : '#ff9a4d';
+        var x = pane.u[0]*W, y = pane.v[0]*H, w = (pane.u[1]-pane.u[0])*W, h = (pane.v[1]-pane.v[0])*H;
+        var image = thumbOf(sm, drawArenaJumbo);
+        g.save(); g.beginPath(); g.rect(x,y,w,h); g.clip();
+        g.fillStyle = '#0b1929'; g.fillRect(x,y,w,h);
+        if (image && image.naturalWidth && image.naturalHeight) {
+          var size = Math.max(w/image.naturalWidth,h/image.naturalHeight);
+          g.drawImage(image, x+(w-image.naturalWidth*size)/2, y+(h-image.naturalHeight*size)/2, image.naturalWidth*size,image.naturalHeight*size);
+        } else {
+          g.fillStyle = col; g.textAlign = 'center';
+          g.font = 'bold '+(panes.length === 1 ? 38 : 26)+'px Arial, sans-serif';
+          g.fillText(String(sm.game || 'TAP TO WATCH').toUpperCase().slice(0,30),x+w/2,y+h*.57,w-34);
+        }
+        if (panes.length === 1) {
+          g.fillStyle = 'rgba(5,13,22,.86)'; g.fillRect(x,y+h-67,w,67);
+          g.fillStyle = '#fff'; g.textAlign = 'left'; g.font = 'bold 31px Arial, sans-serif';
+          g.fillText(String(sm.name || sm.login).slice(0,40),x+22,y+h-25,w-44);
+        }
+        g.restore();
+        if (panes.length === 2) {
+          g.fillStyle = col; g.fillRect(x,40,w,4);
+          g.textAlign = 'left'; g.font = 'bold 48px Arial, sans-serif';
+          g.fillText(ghost ? 'GHOST' : 'ECHO',x+4,96);
+          g.fillStyle = '#fff'; g.font = 'bold 25px Arial, sans-serif';
+          g.fillText(String(sm.name || sm.login).slice(0,33),x+5,440,w-14);
+          g.fillStyle = '#a6becf'; g.font = '21px Arial, sans-serif';
+          g.fillText(String(sm.game || 'LIVE ON TWITCH').slice(0,42),x+5,475,w-14);
+        } else {
+          g.fillStyle = col; g.fillRect(0,0,x,H); g.fillRect(x+w,0,W-x-w,H);
+        }
+      });
+      arenaJumboTex.needsUpdate = true;
+    }
     var jLast = [0, 0];
     function okStream(sm) { if (Array.isArray(sm)) { for (var i = 0; i < sm.length; i++) { var o = okStream(sm[i]); if (o) return o; } return null; } return sm && sm.login && /^[a-z0-9_]{2,25}$/i.test(sm.login) ? sm : null; }
     function liveStream() { var st = (world.extra || {}).stream || {}; return okStream(st.iso) || okStream(st.gs); }
     // The stream on Ghost's side or Echo's side. When the Owner is broadcasting from one of their seats, his stream belongs to that
     // side, whichever side his Twitch account is filed under (README-ADMIN 263).
     function sideStream(w) {
-      var st = (world.extra || {}).stream || {}, base = okStream(w === 'ghost' ? st.iso : st.gs), oa = (typeof inSuite !== 'undefined' && inSuite) || (world.extra || {}).onair || '';
-      if (!oa) return base; var any = liveStream();
+      var st = (world.extra || {}).stream || {}, base = okStream(w === 'ghost' ? (st.iso || st.isos) : st.gs), oa = (typeof inSuite !== 'undefined' && inSuite) || (world.extra || {}).onair || '';
+      if (!oa) return base;
+      var ghostFeed = okStream(st.iso || st.isos), echoFeed = okStream(st.gs);
+      if (ghostFeed && echoFeed && ghostFeed.login.toLowerCase() !== echoFeed.login.toLowerCase()) {
+        return w === 'ghost' ? ghostFeed : echoFeed;
+      }
+      var any = ghostFeed || echoFeed;
       if (w === oa) return base || any;
       return base && any && base.login === any.login ? null : base;
     }
@@ -862,7 +930,10 @@
       } else if (CITY || !arenaMode || true) {
         drawBrand(g, a2, b2);
       }
-      if (Date.now() < welcomeUntil) drawWelcome(g); jTex.needsUpdate = true; try { var g9 = jCv2.getContext('2d'); g9.textAlign = 'center'; g9.textBaseline = 'alphabetic'; drawBrand(g9, a2, b2); if (Date.now() < welcomeUntil) drawWelcome(g9); jTex2.needsUpdate = true; } catch (e) {} drawRigs(); if (typeof drawSuites === 'function') drawSuites(); if (typeof drawWallScreens === 'function') drawWallScreens();
+      if (Date.now() < welcomeUntil) drawWelcome(g);
+      jTex.needsUpdate = true;
+      drawArenaJumbo();
+      drawRigs(); if (typeof drawSuites === 'function') drawSuites(); if (typeof drawWallScreens === 'function') drawWallScreens();
     }
     drawJumbo(0, 0);
     box(6.2, 3.4, 6.2, mats.foot, 0, 0, 0, jumbo);
@@ -1088,6 +1159,19 @@
     var TAP = (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) || 'ontouchstart' in window ? 'Tap' : 'Click', STICKS = TAP === 'Tap', IDLE = STICKS ? 'Left stick walks, right stick looks. Tap Ghost or Echo when you are close to say hello' : 'Click a place to walk there, or the ground to walk about';
     // What cannot be walked through: circles [x, z, r] and turned rectangles [x, z, half width, half depth, turn] (SOLIDS, from
     // the buildings), the lamps, and the ghost's own things.
+    var arenaExit = null;
+    function inExitWalkway(x, z, edge) {
+      return !!arenaExit && x < -edge + 1 && x >= arenaExit.endX && Math.abs(z - arenaExit.z) <= arenaExit.width;
+    }
+    function limitWalkPoint(x, z, edge) {
+      var radius = Math.hypot(x, z);
+      if (radius <= edge || inExitWalkway(x, z, edge)) return [x, z];
+      // Slide along the corridor if a visitor runs into its side or end.
+      if (arenaExit && inExitWalkway(player.x, player.z, edge) && Math.hypot(player.x, player.z) > edge && x < -edge + 1) {
+        return [Math.max(arenaExit.endX, x), Math.max(arenaExit.z - arenaExit.width, Math.min(z, arenaExit.z + arenaExit.width))];
+      }
+      return [x * edge / radius, z * edge / radius];
+    }
     var PLAYER_SOLIDS = [];      // walls only the visitor bumps into (the stage edge); Ghost and Echo walk through them
     function blocked() { return SOLIDS.concat(boothSolids, typeof thingSpots === 'undefined' ? [] : thingSpots); }
     function inRing(o, x, z, pad) {
@@ -1127,7 +1211,7 @@
       if (seatY) { if (seatLock) return; standUp(); }
       var dx = tx - player.x, dz = tz - player.z, d = Math.hypot(dx, dz) || .0001, nx = player.x + dx / d * len, nz = player.z + dz / d * len;
       blocked().concat(PLAYER_SOLIDS).forEach(function (o) { var p2 = pushOut(o, nx, nz); if (p2) { nx = p2[0]; nz = p2[1]; } });
-      var rr = Math.hypot(nx, nz); if (rr > EDGE) { nx *= EDGE / rr; nz *= EDGE / rr; }
+      var limited = limitWalkPoint(nx, nz, EDGE); nx = limited[0]; nz = limited[1];
       stride += Math.hypot(nx - player.x, nz - player.z); player.x = nx; player.z = nz;
     }
     function turnTo(want, amount) { var diff = Math.atan2(Math.sin(want - pyaw), Math.cos(want - pyaw)); pyaw += diff * Math.min(1, amount); }
@@ -1135,12 +1219,12 @@
       blockedList = blockedList.filter(function (o) { return o.length === 4 || Math.hypot(o[0], o[1]) < edge + 30; });
       // One-metre cells keep routing responsive across the enlarged floor,
       // while the existing .35m collision clearance protects narrow passages.
-      var HALF = Math.ceil(edge) + 1, CELL = 1, N = Math.round(HALF * 2 / CELL) + 1;
+      var HALF = Math.ceil(arenaExit ? Math.max(edge, -arenaExit.endX) : edge) + 1, CELL = 1, N = Math.round(HALF * 2 / CELL) + 1;
       function at(i) { return -HALF + i * CELL; }
       function cellOf(v) { return Math.max(0, Math.min(N - 1, Math.round((v + HALF) / CELL))); }
       var free = new Uint8Array(N * N);
       for (var j = 0; j < N; j++) for (var i = 0; i < N; i++) {
-        var x = at(i), z = at(j), ok = Math.hypot(x, z) <= edge;
+        var x = at(i), z = at(j), ok = Math.hypot(x, z) <= edge || inExitWalkway(x, z, edge);
         for (var k = 0; ok && k < blockedList.length; k++) if (inside(blockedList[k], x, z, .35)) ok = false;
         free[j * N + i] = ok ? 1 : 0;
       }
@@ -1226,13 +1310,13 @@
       var b = canvas.getBoundingClientRect(); ndc.set((clientX - b.left) / b.width * 2 - 1, -((clientY - b.top) / b.height * 2 - 1)); ray.setFromCamera(ndc, camera);
       var o = ray.ray.origin, dir = ray.ray.direction; if (dir.y > -.03) return null;
       var t = -o.y / dir.y; if (t > 90) return null;
-      var x = o.x + dir.x * t, z = o.z + dir.z * t, r = Math.hypot(x, z); if (r > EDGE - .1) { x *= (EDGE - .1) / r; z *= (EDGE - .1) / r; }
-      return { x: x, z: z };
+      var hit = limitWalkPoint(o.x + dir.x * t, o.z + dir.z * t, EDGE - .1);
+      return { x: hit[0], z: hit[1] };
     }
     function inTheWay(x, z) { return blocked().some(function (o) { return inside(o, x, z, .2); }); }
     function stroll(gp) {
       if (mode !== 'walk' || seatLock) return;      /* seated (a seat, a suite, a mod desk): a click never moves you */
-      var gd = Math.hypot(gp.x, gp.z); if (gd > EDGE) gp = { x: gp.x * EDGE / gd, z: gp.z * EDGE / gd };
+      var limited = limitWalkPoint(gp.x, gp.z, EDGE); gp = { x: limited[0], z: limited[1] };
       if (paused) { if (!inTheWay(gp.x, gp.z)) { player.x = gp.x; player.z = gp.z; still(); } return; }
       var path = routeTo(gp.x, gp.z); if (inTheWay(gp.x, gp.z)) path.pop();
       if (!path.length) { stopWalk(); return; }
@@ -1309,7 +1393,7 @@
 
     var filmPose = null, filmCam = null, filmKey = null;      // only for recording a video (test hooks film / filmCam)
     function cameraPosition() {
-      if (filmCam) { camera.position.set(filmCam[0], filmCam[1], filmCam[2]); camera.lookAt(filmCam[3], filmCam[4], filmCam[5]); try { ['ghost', 'echo'].forEach(function (w) { if (ACT[w] && ACT[w].b && ACT[w].b.sp) ACT[w].b.sp.visible = false; }); spirit.rotation.y = Math.atan2(camera.position.x - currentPos.x, camera.position.z - currentPos.z); echoSpirit.rotation.y = Math.atan2(camera.position.x - echoPos.x, camera.position.z - echoPos.z); } catch (e) {} return; }
+      if (filmCam) { camera.position.set(filmCam[0], filmCam[1], filmCam[2]); camera.lookAt(filmCam[3], filmCam[4], filmCam[5]); try { ['ghost', 'echo'].forEach(function (w) { if (ACT[w] && ACT[w].b && ACT[w].b.sp) ACT[w].b.sp.visible = false; }); spirit.rotation.y = SUITES.ghost && SUITES.ghost.hostMount ? SUITES.ghost.hostAngle : Math.atan2(camera.position.x - currentPos.x, camera.position.z - currentPos.z); echoSpirit.rotation.y = SUITES.echo && SUITES.echo.hostMount ? SUITES.echo.hostAngle : Math.atan2(camera.position.x - echoPos.x, camera.position.z - echoPos.z); } catch (e) {} return; }
       if (inSuite) { var shot = shotOf(camShot); if (shot) {
         // Streamer Cam now looks BACK at the seated host from the far side of
         // the screens. Keep both character models visible for every shot.
@@ -1321,7 +1405,7 @@
       if (mode === 'walk') { var cq = Math.cos(ppitch), ey = EYE + bob + seatY + standY(); camera.position.set(player.x, ey, player.z); camera.lookAt(player.x + Math.sin(pyaw) * cq, ey + Math.sin(ppitch), player.z - Math.cos(pyaw) * cq); return; }
       var cp = Math.cos(pitch); camera.position.set(Math.sin(yaw) * cp * distance, Math.sin(pitch) * distance + 3, Math.cos(yaw) * cp * distance + 2); camera.lookAt(0, 2.0, 2.0);
     }
-    function settle() { var t = SEALED ? (onAir('ghost') || [-14.5, 2.2]) : PLACES[world.where].at; currentPos.set(t[0], 0, t[1]); spirit.position.set(t[0], .13 + floorAt(t[0], t[1]), t[1]); spirit.rotation.y = Math.atan2(camera.position.x - t[0], camera.position.z - t[1]); shadow.position.set(t[0], .125, t[1]); }
+    function settle() { var t = SEALED ? (onAir('ghost') || [-14.5, 2.2]) : PLACES[world.where].at; currentPos.set(t[0], 0, t[1]); if (SUITES && SUITES.ghost && SUITES.ghost.hostMount) { spirit.position.copy(SUITES.ghost.hostMount); spirit.rotation.y = SUITES.ghost.hostAngle; } else { spirit.position.set(t[0], .13 + floorAt(t[0], t[1]), t[1]); spirit.rotation.y = Math.atan2(camera.position.x - t[0], camera.position.z - t[1]); } shadow.position.set(t[0], .125, t[1]); }
     var carTan = new T.Vector3();
     function placeCars(t) {
       for (var i = 0; i < cars.length; i++) {
@@ -1347,10 +1431,12 @@
         if (studioGhostSeat) currentPos.set(studioGhostSeat[0], 0, studioGhostSeat[2]);
         else currentPos.lerp(goal, .012);
         var dx = currentPos.x - before.x, dz = currentPos.z - before.z, walking = dx * dx + dz * dz > .000004;
-        spirit.position.set(currentPos.x, studioGhostSeat ? studioGhostSeat[1] - 1.02 : .13 + floorAt(currentPos.x, currentPos.z) + Math.sin(elapsed * 1.25 * pace) * .09, currentPos.z);
+        if (!studioGhostSeat) hostAction(spirit, walking ? 'Walk' : 'Idle');
+        if (studioGhostSeat && SUITES.ghost.hostMount) spirit.position.copy(SUITES.ghost.hostMount);
+        else spirit.position.set(currentPos.x, studioGhostSeat ? studioGhostSeat[1] - 1.02 : .13 + floorAt(currentPos.x, currentPos.z) + Math.sin(elapsed * 1.25 * pace) * .09, currentPos.z);
         blinkers.forEach(function (b, i) { b.visible = Math.sin(elapsed * 2.4 + i) > .55 && !(b.userData.fx && qual === 0); }); fireLights.forEach(function (f, i) { if (f.isLight) f.intensity = 8 + Math.sin(elapsed * 13 + i) * 3; else f.scale.set(1, 1 + Math.sin(elapsed * 11) * .18, 1); }); waters.forEach(function (w) { w.material.opacity = .55 + Math.sin(elapsed * 3) * .15; });
         var pulse = .5 + Math.sin(elapsed * 2.1) * .5, nearGhost = Math.max(0, 1 - Math.hypot(player.x - currentPos.x, player.z - currentPos.z) / 8); halo.material.opacity = .24 + pulse * .14; spark.scale.setScalar(1.0 + pulse * .25 + nearGhost * .12); heart.scale.set(.15 + pulse * .015, .15 + pulse * .015, .1); spinner.rotation.z = elapsed * .22; figure.rotation.z = Math.sin(elapsed * .7 * pace) * .05 * pace; figure.rotation.x = -.1 * nearGhost; clouds.rotation.y = elapsed * .003;
-        spirit.rotation.y = filmCam ? Math.atan2(camera.position.x - currentPos.x, camera.position.z - currentPos.z) : (onAir('ghost') && SUITES.ghost && Math.hypot(currentPos.x - SUITES.ghost.seat[0], currentPos.z - SUITES.ghost.seat[2]) < 1.2 ? SUITES.ghost.yaw : lifeFace('ghost', currentPos, elapsed));
+        spirit.rotation.y = studioGhostSeat && SUITES.ghost.hostMount ? SUITES.ghost.hostAngle : filmCam ? Math.atan2(camera.position.x - currentPos.x, camera.position.z - currentPos.z) : (onAir('ghost') && SUITES.ghost && Math.hypot(currentPos.x - SUITES.ghost.seat[0], currentPos.z - SUITES.ghost.seat[2]) < 1.2 ? SUITES.ghost.yaw : lifeFace('ghost', currentPos, elapsed));
         if (suiteHid.ghost) { spirit.visible = true; suiteHid.ghost = false; }
         shadow.position.set(currentPos.x, .125, currentPos.z); dust.rotation.y = elapsed * .007;
         beacon.material = Math.sin(elapsed * 2.2) > .2 ? mats.light : mats.off;
@@ -1388,7 +1474,7 @@
         t.material.opacity = n; t.visible = n > .03;
       });
     }
-    function still() { if (!ready) return; updateWalkMarker(); cameraPosition(); camera.updateMatrixWorld(); sizeTags(); spirit.rotation.y = Math.atan2(camera.position.x - spirit.position.x, camera.position.z - spirit.position.z); if (typeof echoSpirit !== 'undefined' && echoSpirit && typeof echoPos !== 'undefined' && echoPos) echoSpirit.rotation.y = Math.atan2(camera.position.x - echoPos.x, camera.position.z - echoPos.z); stillDraw(); }
+    function still() { if (!ready) return; updateWalkMarker(); cameraPosition(); camera.updateMatrixWorld(); sizeTags(); spirit.rotation.y = SUITES.ghost && SUITES.ghost.hostMount ? SUITES.ghost.hostAngle : Math.atan2(camera.position.x - spirit.position.x, camera.position.z - spirit.position.z); if (typeof echoSpirit !== 'undefined' && echoSpirit && typeof echoPos !== 'undefined' && echoPos) echoSpirit.rotation.y = SUITES.echo && SUITES.echo.hostMount ? SUITES.echo.hostAngle : Math.atan2(camera.position.x - echoPos.x, camera.position.z - echoPos.z); stillDraw(); }
     // A still frame is drawn once, on the next screen refresh, however many things asked for one; and not at all while
     // the arena is already drawing itself every frame.
     var stillQueued = 0;
@@ -1493,7 +1579,7 @@
       ndc.set((clientX - b.left) / b.width * 2 - 1, -((clientY - b.top) / b.height * 2 - 1));
       ray.setFromCamera(ndc, camera); var hits = ray.intersectObjects(pickable, false).filter(function (h) { return h.object.visible; });
       if (!hits.length) return '';
-      var hit = hits[0]; if (hit.object.userData.gameNight) return 'game-night'; if (hit.object.userData.prank) return 'prank'; if (hit.object.userData.plot) return 'plot:' + hit.object.userData.plot; if (hit.object.userData.jumbo) return 'jumbo'; if (hit.object.userData.wall !== undefined && wallStream(hit.object.userData.wall)) return 'wall:' + hit.object.userData.wall; if (hit.object.userData.rig !== undefined && rigStream(hit.object.userData.rig)) return 'rig:' + hit.object.userData.rig; if (hit.object.userData.lore) return 'lore'; if (hit.object.userData.named !== undefined) return 'house:' + hit.object.userData.named;
+      var hit = hits[0]; if (hit.object.userData.gameNight) return 'game-night'; if (hit.object.userData.prank) return 'prank'; if (hit.object.userData.plot) return 'plot:' + hit.object.userData.plot; if (hit.object.userData.arenaJumbo && hit.uv) return 'jumbo:' + (hit.uv.x < .5 ? '0' : '1'); if (hit.object.userData.jumbo) return 'jumbo'; if (hit.object.userData.wall !== undefined && wallStream(hit.object.userData.wall)) return 'wall:' + hit.object.userData.wall; if (hit.object.userData.rig !== undefined && rigStream(hit.object.userData.rig)) return 'rig:' + hit.object.userData.rig; if (hit.object.userData.lore) return 'lore'; if (hit.object.userData.named !== undefined) return 'house:' + hit.object.userData.named;
       var hn = hit.object === mBody ? instNamed[hit.instanceId] : hit.object.userData.cityHouses ? hit.object.userData.cityHouses[hit.instanceId] : (hit.object.userData.house !== undefined ? townNamed[hit.object.userData.house] : undefined);
       if (hn !== undefined) return hn >= 0 ? 'house:' + hn : '';
       return hit.object.userData.place || '';
@@ -1507,7 +1593,7 @@
       if (mode === 'walk') { stopWalk(); pyaw -= dx * .005; if (e.pointerType === 'mouse' || seatY) ppitch = Math.max(-.6, Math.min(.85, ppitch + dy * .004)); still(); wake(); return; }
       adjusted = true; yaw -= dx * .006; pitch = Math.max(.1, Math.min(1.25, pitch + dy * .005)); still(); wake();
     });
-    stage.addEventListener('pointerup', function (e) { var was = drag; drag = null; if (was && moved < 6 && e.timeStamp - downAt < 1500) { /* the events' own times, so a busy phone does not lose a tap */ var id = pick(e.clientX, e.clientY), gp = id ? null : groundAt(e.clientX, e.clientY); if (id === 'game-night') openNight(); else if (id === 'jumbo') { startAll(); if (!liveStream() || !vids[liveStream().login]) openStream(); } else if (id === 'prank') returnPrank(); else if (/^plot:/.test(id)) plotTap(id.slice(5)); else if (/^poke:/.test(id)) poke(id.slice(5)); else if (/^wall:\d$/.test(id)) { startAll(); var wsm = wallStream(+id.slice(5)); if (wsm && !vids[wsm.login]) openStream(wsm); } else if (/^rig:\d$/.test(id)) { startAll(); var rsm = rigStream(+id.slice(4)); if (rsm && !vids[rsm.login]) openStream(rsm); } else if (id) { if (STICKS) openNear(id); else startWalk(id); } else if (gp) { if (!STICKS) stroll(gp); } else stopWalk(); } });
+    stage.addEventListener('pointerup', function (e) { var was = drag; drag = null; if (was && moved < 6 && e.timeStamp - downAt < 1500) { /* the events' own times, so a busy phone does not lose a tap */ var id = pick(e.clientX, e.clientY), gp = id ? null : groundAt(e.clientX, e.clientY); if (id === 'game-night') openNight(); else if (/^jumbo:[01]$/.test(id)) { var panes = arenaJumboPanes(), pane = panes.length === 1 ? panes[0] : panes[+id.slice(-1)]; if (pane) openStream(pane.stream); } else if (id === 'jumbo') { startAll(); if (!liveStream() || !vids[liveStream().login]) openStream(); } else if (id === 'prank') returnPrank(); else if (/^plot:/.test(id)) plotTap(id.slice(5)); else if (/^poke:/.test(id)) poke(id.slice(5)); else if (/^wall:\d$/.test(id)) { startAll(); var wsm = wallStream(+id.slice(5)); if (wsm && !vids[wsm.login]) openStream(wsm); } else if (/^rig:\d$/.test(id)) { startAll(); var rsm = rigStream(+id.slice(4)); if (rsm && !vids[rsm.login]) openStream(rsm); } else if (id) { if (STICKS) openNear(id); else startWalk(id); } else if (gp) { if (!STICKS) stroll(gp); } else stopWalk(); } });
     // The big screen: when a member is live it plays their stream over the town (muted until they turn it up).
     var liveBox = null;
     function openStream(which, sound) {
@@ -2079,7 +2165,7 @@
       var hd = el('div', 'igw-guide-head'); hd.appendChild(el('b', '', 'WELCOME TO THE ARENA')); var x = el('button', 'igw-guide-x', '×'); x.type = 'button'; x.setAttribute('aria-label', 'Close'); x.addEventListener('click', closeGuide); hd.appendChild(x); help.appendChild(hd);
       var tabs = el('div', 'igw-guide-tabs'); [['pc', 'Computer'], ['mobile', 'Phone and tablet']].forEach(function (t2) { var b = el('button', t2[0] === kind ? 'is-on' : '', t2[1]); b.type = 'button'; b.setAttribute('aria-pressed', t2[0] === kind ? 'true' : 'false'); b.addEventListener('click', function () { fillGuide(t2[0]); }); tabs.appendChild(b); }); help.appendChild(tabs);
       var list = el('dl', 'igw-guide-list'); CONTROLS[kind].forEach(function (c4) { list.appendChild(el('dt', '', c4[0])); list.appendChild(el('dd', '', c4[1])); }); help.appendChild(list);
-      help.appendChild(el('p', 'igw-guide-note', 'Ghost and Echo stream from the stage: Ghost from the station on the left, Echo from the sim rig on the right. The big screens show whoever is live, and the jumbotron shows who is in the Discord.'));
+      help.appendChild(el('p', 'igw-guide-note', 'Ghost and Echo stream from the stage: Ghost from the station on the left, Echo from the sim rig on the right. The jumbotron fills with one live stream or splits between Ghost and Echo. Each wall shows its own side.'));
       var go2 = el('button', 'igw-guide-go', 'Take my seat'); go2.type = 'button'; go2.addEventListener('click', closeGuide); help.appendChild(go2);
     }
     function openGuide() { fillGuide(touchFirst ? 'mobile' : 'pc'); help.hidden = false; stage.classList.add('igw-guide-open'); var b2 = help.querySelector('.igw-guide-go'); if (b2) setTimeout(function () { try { b2.focus({ preventScroll: true }); } catch (e) {} }, 30); }
@@ -2132,8 +2218,9 @@
       var actorY = cockpitDriver && Number.isFinite(cockpitDriver.actorFootY)
         ? cockpitDriver.bottomY - cockpitDriver.actorFootY
         : (studioEchoSeat ? studioEchoSeat[1] - 1.02 : .13 + floorAt(echoPos.x, echoPos.z) + Math.sin(t * 1.9 + 1.3) * .11);
-      echoSpirit.position.set(echoPos.x, actorY, echoPos.z);
-      echoSpirit.rotation.y = filmCam ? Math.atan2(camera.position.x - echoPos.x, camera.position.z - echoPos.z) : (onAir('echo') && SUITES.echo && Math.hypot(echoPos.x - SUITES.echo.seat[0], echoPos.z - SUITES.echo.seat[2]) < 1.2 ? SUITES.echo.yaw : lifeFace('echo', echoPos, t));
+      if (studioEchoSeat && SUITES.echo.hostMount) echoSpirit.position.copy(SUITES.echo.hostMount);
+      else echoSpirit.position.set(echoPos.x, actorY, echoPos.z);
+      echoSpirit.rotation.y = studioEchoSeat && SUITES.echo.hostMount ? SUITES.echo.hostAngle : filmCam ? Math.atan2(camera.position.x - echoPos.x, camera.position.z - echoPos.z) : (onAir('echo') && SUITES.echo && Math.hypot(echoPos.x - SUITES.echo.seat[0], echoPos.z - SUITES.echo.seat[2]) < 1.2 ? SUITES.echo.yaw : lifeFace('echo', echoPos, t));
       if (suiteHid.echo) { echoSpirit.visible = true; suiteHid.echo = false; }
     }
     (function () { var w = (X.echo && ECHO_AT[X.echo.where]) || ECHO_AT.finish; echoPos.set(w[0], 0, w[1]); echoSpirit.position.set(w[0], .13, w[1]); })();
@@ -2778,8 +2865,8 @@
       if (disp) {
         var bb = new T.Box3().setFromObject(disp), c = bb.getCenter(new T.Vector3()), sz = bb.getSize(new T.Vector3());
         [[0, sz.x, 0, sz.z / 2], [Math.PI, sz.x, 0, -sz.z / 2], [Math.PI / 2, sz.z, sz.x / 2, 0], [-Math.PI / 2, sz.z, -sz.x / 2, 0]].forEach(function (f, fi) {
-          var m = new T.Mesh(new T.PlaneGeometry(f[1] * .96, sz.y * .92), new T.MeshBasicMaterial({ map: fi < 2 ? jTex : jTex2, toneMapped: false }));      // north and south: live; east and west: the brand
-          m.position.set(c.x + f[2] + Math.sin(f[0]) * .06, c.y, c.z + f[3] + Math.cos(f[0]) * .06); m.rotation.y = f[0]; m.userData.jumbo = true; m.userData.keep = true; scene.add(m); arenaFaces.push(m);
+          var m = new T.Mesh(new T.PlaneGeometry(f[1] * .96, sz.y * .92), new T.MeshBasicMaterial({ map: arenaJumboTex, toneMapped: false }));
+          m.position.set(c.x + f[2] + Math.sin(f[0]) * .06, c.y, c.z + f[3] + Math.cos(f[0]) * .06); m.rotation.y = f[0]; m.userData.jumbo = true; m.userData.arenaJumbo = true; m.userData.keep = true; scene.add(m); arenaFaces.push(m); pickable.push(m);
         });
         JUMBO_AT.set(c.x, c.y, c.z);
         // Scout's light (README-ADMIN 257): a green ring under the jumbotron, lit for as long as Scout is on. Nobody in the arena knows
@@ -2822,6 +2909,7 @@
         var best = null; found.forEach(function (g) { if (Math.abs(angDiff(g.a, want)) < .45 && (!best || Math.abs(angDiff(g.a, want)) < Math.abs(angDiff(best.a, want)))) best = g; });
         return best ? { a: best.a, hw: Math.max(3, best.hw) } : { a: want, hw: 0 };
       });
+      if (arenaExit) gaps = [{ a: Math.PI / 2, hw: 0 }, { a: 3 * Math.PI / 2, hw: arenaExit.width + .25 }];
       if (!found.length) found = [];
       var C = CITY = { floor: ARENA_FLOOR, ao: ao, a0: ao + 8, a1: ao + 15, b0: ao + 40, b1: ao + 46, edge: ao + 72, gaps: gaps, gE: gaps[0].a, gW: gaps[1].a };
       var rS = (C.a1 + C.b0) / 2; C.sq = { x: Math.sin(C.gW) * rS, z: Math.cos(C.gW) * rS, r: 11 };
@@ -3156,17 +3244,126 @@
     function suiteTop(x, z) { if (!stageMeshes.length) return 1.65; var rc = new T.Raycaster(); rc.set(new T.Vector3(x, 10, z), new T.Vector3(0, -1, 0)); var h = rc.intersectObjects(stageMeshes, false).filter(function (q) { return q.point.y < 3; }); return h.length ? h[0].point.y : 1.65; }
     // ---- Ghost and Echo themselves (README-ADMIN 260): ChatGPT's hooded characters take the place of the old steel cores. Each one
     //      hangs in the core's own group, so it moves, turns and floats exactly as the core did, and plays its Idle animation.
+/* Fit the existing humanoid armature to an equipment-local seat and controls. */
+function fitSeatedHost(T, actor, who) {
+  const lookup = (name) => actor.getObjectByName(T.PropertyBinding.sanitizeNodeName(name));
+  const root = lookup('Root');
+  const spine = lookup('Chest');
+  if (!root?.isBone || !spine?.isBone) return null;
+  const spec = who === 'ghost'
+    ? {scale:.99, hips:[0,.723,.410], left:[.126,.862,-.082], right:[-.151,.862,-.082], feet:[.155,.082,.086]}
+    : {scale:1.00, hips:[0,.640,.706], left:[.173,.934,.337], right:[-.173,.934,.337], feet:[.205,.145,.132]};
+  const vector = (a) => new T.Vector3(...a);
+  const pos = (o) => o.getWorldPosition(new T.Vector3());
+  const quat = (o) => o.getWorldQuaternion(new T.Quaternion());
+  const axis = new T.Vector3(1,0,0);
+  actor.position.set(0,0,0);
+  actor.scale.setScalar(spec.scale);
+  actor.rotation.set(0,Math.PI,0);
+  actor.updateMatrixWorld(true);
+  const parent = actor.parent;
+  const relative = (v) => parent ? parent.localToWorld(vector(v)) : vector(v);
+  const footRotation = {};
+  for (const side of ['L','R']) footRotation[side] = quat(lookup('Foot.'+side));
+  const spineLean = new T.Quaternion().setFromAxisAngle(axis,who==='ghost' ? .29 : -.045);
+  spine.quaternion.multiply(spineLean);
+  actor.updateMatrixWorld(true);
+  const currentHip = pos(root);
+  if(parent) parent.worldToLocal(currentHip);
+  actor.position.copy(vector(spec.hips).sub(currentHip));
+  actor.updateMatrixWorld(true);
+  function bend(upper, lower, end, target, pole) {
+    const a=pos(upper), b=pos(lower), c=pos(end);
+    const first=a.distanceTo(b), second=b.distanceTo(c);
+    if(first<.001 || second<.001) return;
+    const to=target.clone().sub(a);
+    const distance=T.MathUtils.clamp(to.length(),Math.abs(first-second)+.001,first+second-.003);
+    const dir=to.normalize();
+    const w=pole.clone().sub(a);
+    w.addScaledVector(dir,-w.dot(dir)).normalize();
+    const run=(first*first-second*second+distance*distance)/(2*distance);
+    const elbow=a.clone().addScaledVector(dir,run).addScaledVector(w,Math.sqrt(Math.max(0,first*first-run*run)));
+    const reach=a.clone().addScaledVector(dir,distance);
+    const aim=(bone,child,wanted)=>{
+      const start=pos(bone);
+      const turn=new T.Quaternion().setFromUnitVectors(pos(child).sub(start).normalize(),wanted.clone().sub(start).normalize());
+      const world=turn.multiply(quat(bone));
+      bone.quaternion.copy(quat(bone.parent).invert().multiply(world));
+      bone.updateMatrixWorld(true);
+    };
+    aim(upper,lower,elbow);
+    aim(lower,end,reach);
+  }
+  for(const side of ['L','R']){
+    const sign=side==='L'?1:-1;
+    const bone=(name)=>lookup(name+'.'+side);
+    const foot=bone('Foot');
+    bend(bone('Thigh'),bone('Shin'),foot,relative([spec.feet[0]*sign,spec.feet[1],spec.feet[2]]),
+        relative([.20*sign,spec.hips[1]+.05,spec.hips[2]-.42]));
+    foot.quaternion.copy(quat(foot.parent).invert().multiply(footRotation[side]));
+    foot.updateMatrixWorld(true);
+    const hand=bone('Hand');
+    const handTarget=side==='L'?spec.left:spec.right;
+    bend(bone('UpperArm'),bone('Forearm'),hand,relative(handTarget),
+        relative([.37*sign,.63,spec.hips[2]-.10]));
+    if(who==='echo'){
+      // Close the segmented fingers around each rubber grip.
+      for(const digit of ['Index','Middle','Ring','Little']){
+        for(const [joint,angle] of [['01',.14],['02',.28],['03',.26]]){
+          const finger=bone(digit+'.'+joint);
+          if(finger)finger.quaternion.multiply(new T.Quaternion().setFromAxisAngle(axis,angle));
+        }
+      }
+    }
+
+  }
+  actor.updateMatrixWorld(true);
+  return spec;
+}
+
+    function hostAction(group, wanted) {
+      var player = group.userData.hostActions;
+      if (!player || player.current === wanted || !player.actions[wanted]) return;
+      if (player.current) player.actions[player.current].stop();
+      player.current = wanted;
+      player.actions[wanted].reset().play();
+      player.mixer.update(.01);
+    }
+
+    function hostInRig(who, group, mount, angle) {
+      var avatar = group.userData.character, player = group.userData.hostActions;
+      if (!avatar || !player || !player.actions.Sit) return null;
+      hostAction(group, 'Sit');
+      group.position.copy(mount);
+      group.rotation.set(0, angle, 0);
+      group.updateMatrixWorld(true);
+      var fit = fitSeatedHost(T, avatar, who);
+      if (!fit) return null;
+      // Keep the limb fit after the clip samples. Pause this action, not the world.
+      player.actions.Sit.paused = true;
+      var index = mixers.indexOf(player.mixer);
+      if (index >= 0) mixers.splice(index, 1);
+      return mount.clone();
+    }
+
     function fitCharacters() {
       var done = {};
       [['ghost', spirit, typeof figure !== 'undefined' ? figure : null], ['echo', echoSpirit, typeof echoFigure !== 'undefined' ? echoFigure : null]].forEach(function (c) {
         var src = kinds[c[0]], grp = c[1]; if (!src || !grp || grp.userData.character) return;
-        var ch = src.clone(true); ch.updateMatrixWorld(true); var bb = new T.Box3().setFromObject(ch), sz = bb.getSize(new T.Vector3()), mid = bb.getCenter(new T.Vector3());
+        var ch = src; ch.updateMatrixWorld(true); var bb = new T.Box3().setFromObject(ch), sz = bb.getSize(new T.Vector3()), mid = bb.getCenter(new T.Vector3());
         var sc = 2.2 / Math.max(.1, sz.y); ch.scale.multiplyScalar(sc); ch.position.set(-mid.x * sc, .25 - bb.min.y * sc, -mid.z * sc);
         var glowFix = {}; ch.traverse(function (o) { if (!o.isMesh) return; o.userData.keep = true; var m = o.material; if (m && m.emissiveIntensity > 1.5) { if (!glowFix[m.uuid]) { glowFix[m.uuid] = m.clone(); glowFix[m.uuid].emissiveIntensity = 1.45; } o.material = glowFix[m.uuid]; } });      // Echo's glow came 3x brighter than Ghost's and bloomed into a blob: both at Ghost's level
         if (c[2]) c[2].visible = false; var sp = grp.getObjectByName('core-spinner'); if (sp) sp.visible = false;
         grp.children.forEach(function (k) { if (k.isPointLight) { k.visible = false; k.intensity = 0; } });     // the characters glow by themselves: the old core's light goes
         grp.add(ch); grp.userData.character = ch;
-        var clips = src.userData.anims || []; if (clips.length) { var mx = new T.AnimationMixer(ch); clips.forEach(function (cl) { mx.clipAction(cl).play(); }); mixers.push(mx); }
+        var clips = src.userData.anims || [];
+        if (clips.length) {
+          var mx = new T.AnimationMixer(ch), actions = {};
+          clips.forEach(function (clip) { actions[clip.name] = mx.clipAction(clip); });
+          grp.userData.hostActions = { mixer: mx, actions: actions, current: null };
+          hostAction(grp, actions.Idle ? 'Idle' : clips[0].name);
+          mixers.push(mx);
+        }
         done[c[0]] = true;
       });
       // they start the night on the stage, each by their own rig
@@ -3373,7 +3570,12 @@
       if (!stageRoots.main) return;
       [['ghost', 'station', -19, Math.PI / 2, .55, 1.2, 'iso'], ['echo', 'simrig', 19, -Math.PI / 2, .75, 1.05, 'gs']].forEach(function (c) {
         var src = kinds[c[1]]; if (!src) return;
-        var root = src.clone(true), y = suiteTop(c[2], 0); root.position.set(c[2], y, 0); root.rotation.set(0, c[3], 0); root.updateMatrixWorld(true);
+        var name = c[0] === 'ghost' ? 'StageAnchor_Ghost' : 'StageAnchor_Echo';
+        var anchor = stageRoots.main.getObjectByName(name);
+        var mount = anchor ? anchor.getWorldPosition(new T.Vector3()) : new T.Vector3(c[2], suiteTop(c[2], 0), 0);
+        c[2] = mount.x;
+        var root = src.clone(true), y = mount.y; root.position.copy(mount); root.rotation.set(0, c[3], 0); root.updateMatrixWorld(true);
+        modelInfo.stageMounts = modelInfo.stageMounts || {}; modelInfo.stageMounts[c[0]] = mount.toArray();
         // each screen has its own job (README-ADMIN 262): the centre one the stream, the left one LIVE NOW and the logo, the right one
         // the Twitch chat; the small one on the wheel matches the left one
         var scr = {}, list = []; root.traverse(function (o) { if (o.isMesh && /^Screen/i.test(o.name || '')) list.push(o); });
@@ -3390,7 +3592,15 @@
         rigOnlyUplights(root, c[0]);
         var dir = c[3] > 0 ? 1 : -1;      // the chair side points to the middle of the stage
         SUITES[c[0]] = { root: root, cv: cv, tx: tx, scr: scr, back: 0, side: c[6], seat: [c[2] + dir * c[4], c[5] + y, 0], yaw: dir > 0 ? -Math.PI / 2 : Math.PI / 2 };
-        if (c[0] === 'echo') {
+        var hostGroup = c[0] === 'ghost' ? spirit : echoSpirit;
+        var seatedMount = hostInRig(c[0], hostGroup, mount, c[3]);
+        if (seatedMount) {
+          SUITES[c[0]].hostMount = seatedMount;
+          SUITES[c[0]].hostAngle = c[3];
+          modelInfo.seatedHosts = modelInfo.seatedHosts || {};
+          modelInfo.seatedHosts[c[0]] = true;
+        }
+        if (c[0] === 'echo' && !seatedMount) {
           // Anchor Echo to the REAL cockpit upholstery instead of the old
           // approximate world coordinate. Fabric's lower extent is the seat cushion.
           var upholstery = root.getObjectByName('Fabric');
@@ -3534,8 +3744,7 @@
         y -= 4;
       }
     }
-    // ---- The arena's two big wall screens: Ghost's (west) and Echo's (east). The live side shows its stream; the other side shows
-    //      the arena's chat while someone is live; with no one live, each shows its logo and OFFLINE.
+    // Wall screens keep their own side's stream and its offline card.
     var WALLS = {};
     function hookWalls(root) {
       root.traverse(function (o) {
@@ -3555,22 +3764,15 @@
     }
     function drawWallScreens() {
       if (!WALLS) return;
-      var st = (world.extra || {}).stream || {}, live = { ghost: sideStream('ghost'), echo: sideStream('echo') };
-      var anyLive = live.ghost || live.echo || inSuite;
+      var live = { ghost: sideStream('ghost'), echo: sideStream('echo') };
       Object.keys(WALLS).forEach(function (w) {
-        var wl = WALLS[w], g = wl.cv.getContext('2d'), col = w === 'ghost' ? '#4fc8f5' : '#ff9a4d', mine = live[w] || inSuite === w;
+        var wl = WALLS[w], g = wl.cv.getContext('2d'), col = w === 'ghost' ? '#4fc8f5' : '#ff9a4d', mine = live[w];
         g.fillStyle = '#03070d'; g.fillRect(0, 0, 768, 342); g.textAlign = 'center';
         if (mine) {
           var im = live[w] ? thumbOf(live[w], drawWallScreens) : null;
           if (im) { try { g.drawImage(im, 0, 0, 768, 342); } catch (e) {} } else { g.fillStyle = col; g.font = 'bold 40px Arial, sans-serif'; g.fillText((w === 'ghost' ? 'GHOST' : 'ECHO') + ' IS LIVE', 384, 190); }
           g.fillStyle = '#e8262b'; g.fillRect(20, 20, 96, 38); g.fillStyle = '#fff'; g.font = 'bold 26px Arial, sans-serif'; g.fillText('LIVE', 68, 48);
           if (live[w] && live[w].viewers) { g.textAlign = 'right'; g.fillText(live[w].viewers + ' WATCHING', 748, 48); }
-        } else if (anyLive) {
-          g.fillStyle = col; g.fillRect(0, 0, 768, 8); g.fillStyle = '#ffffff'; g.font = 'bold 30px Arial, sans-serif'; g.textAlign = 'left'; g.fillText('ISOCORE CHAT', 30, 56);
-          if (tchat.lines.length) { g.fillStyle = '#03070d'; g.fillRect(0, 0, 768, 342); drawChat(g, 768, 342, col, true); wl.tx.needsUpdate = true; return; }
-          var lines = chatLines().slice(-6); g.font = '22px Arial, sans-serif'; g.fillStyle = '#c9d6e6';
-          if (!lines.length) g.fillText('Say hello: the chat opens with the stream.', 30, 110);
-          lines.forEach(function (ln, i) { g.fillText(ln.slice(0, 62), 30, 110 + i * 38); });
         } else {
           if (!suiteImg[w]) { suiteImg[w] = new Image(); suiteImg[w].crossOrigin = 'anonymous'; suiteImg[w].onload = drawWallScreens; suiteImg[w].src = w === 'ghost' ? ISOCORE_ASSET_BASE + 'assets/ghost-logo.webp' : ISOCORE_ASSET_BASE + 'assets/echo-logo.webp'; }
           var li = suiteImg[w]; if (li.complete && li.naturalWidth) { var sc = Math.min(560 / li.naturalWidth, 240 / li.naturalHeight); try { g.drawImage(li, 384 - li.naturalWidth * sc / 2, 18, li.naturalWidth * sc, li.naturalHeight * sc); } catch (e) {} }
@@ -3684,13 +3886,13 @@
     var inSuite = '';
     function enterSuite(w) {
       var su = SUITES[w]; if (!su) return; stopWalk(); keys = {};
-      makeCamRow(); cutTo('first'); inSuite = w; seatAt = null; onAirTell(w); seatY = su.seat[1] - EYE; player.x = su.seat[0]; player.z = su.seat[2]; pyaw = su.yaw; ppitch = -.12; bob = 0;
+      makeCamRow(); cutTo('first'); inSuite = w; seatAt = null; onAirTell(w); drawArenaJumbo(); seatY = su.seat[1] - EYE; player.x = su.seat[0]; player.z = su.seat[2]; pyaw = su.yaw; ppitch = -.12; bob = 0;
       seatLock = true; stage.classList.add('igw-in-suite'); stage.classList.remove('igw-seated');
       say('Broadcasting as ' + (w === 'ghost' ? 'Ghost' : 'Echo') + '. Pick a camera below; Menu > Leave the seat to get up'); setTimeout(function () { say(''); }, 5000); drawWallScreens(); drawSuites(); still(); wake();
     }
     function leaveSuite() {
       var su = SUITES[inSuite]; if (!su) return; var back = su.yaw < 0 ? 1.8 : -1.8;
-      inSuite = ''; seatY = 0; seatLock = false; stage.classList.remove('igw-in-suite'); onAirTell(''); drawWallScreens(); drawSuites(); try { resize(); } catch (e) {} player.x = su.seat[0] + back; player.z = su.seat[2]; still(); wake();
+      inSuite = ''; seatY = 0; seatLock = false; stage.classList.remove('igw-in-suite'); onAirTell(''); drawArenaJumbo(); drawWallScreens(); drawSuites(); try { resize(); } catch (e) {} player.x = su.seat[0] + back; player.z = su.seat[2]; still(); wake();
     }
     function cityBuild() {
       var C = CITY;
@@ -3729,7 +3931,7 @@
         var r = Math.hypot(o.position.x, o.position.z); if (r > RO - 2 && r < CITY.edge + 8 && i < lifeFrom) { o.visible = false; o.userData.gone = true; }
       });
       if (SEALED) {
-        // nothing outside: the gate and its booths go (their links move to the visitors' phone), and nobody can leave the floor
+        // Keep the broadcast environment indoors, with access to the marked west landing when the arena provides one.
         ['gate', 'login', 'overview', 'post', 'enlist', 'lore'].forEach(function (id) { if (PLACES[id]) { PLACES[id].gone = true; if (PLACES[id].group) PLACES[id].group.visible = false; } });
         tags.forEach(function (t) { if (t.userData.place) { t.visible = false; t.userData.gone = true; } });
         hubKeepList.forEach(function (o) { o.visible = false; }); if (loreK) loreK.visible = false;
@@ -3847,13 +4049,54 @@
       var floorR = starts.length ? starts[Math.floor(starts.length * .25)] : outer * .5;
       var sc = ARENA_FLOOR / floorR;
       root.scale.multiplyScalar(sc); root.position.set(-mid.x * sc, -floorY * sc - .14, -mid.z * sc);
-      arenaRoot = root; cityMeasure(root, meshes);
+      arenaRoot = root;
+      root.updateMatrixWorld(true);
+      var exitMarker = root.getObjectByName('ArenaExitWest');
+      if (exitMarker) {
+        var pExit = exitMarker.getWorldPosition(new T.Vector3()), width = (Number(exitMarker.userData.clearWidth) || 7) * sc / 2;
+        arenaExit = { endX: pExit.x - 7, doorX: pExit.x, z: pExit.z, width: width - .32 };
+        buildArenaExitLanding(root, pExit, width, sc);
+      }
+      cityMeasure(root, meshes);
+      if (arenaExit) info.exit = { side: 'west', outerX: arenaExit.doorX, landingX: arenaExit.endX, width: arenaExit.width * 2 };
       try { hangLogos(root); } catch (e) {}
       try { hookWalls(root); } catch (e) {}
       if (root.userData.anims) { var mx = new T.AnimationMixer(root); root.userData.anims.forEach(function (c) { mx.clipAction(c).play(); }); mixers.push(mx); }
       // the floor is matt enough that the floodlights do not show as four suns in it
       meshes.forEach(function (o) { [].concat(o.material || []).forEach(function (m) { if (m && m.isMeshStandardMaterial && m.roughness < .55) { m.roughness = .55; m.envMapIntensity = Math.min(m.envMapIntensity || 1, .5); if (m.roughnessMap) m.roughnessMap = null; m.needsUpdate = true; } }); });
       info.floor = Math.round(floorR * sc * 10) / 10; info.outer = Math.round(outer * sc * 10) / 10; info.height = Math.round(size.y * sc * 10) / 10;
+    }
+    function buildArenaExitLanding(root, exit, width, scale) {
+      // Add a short playable exterior landing to the west entrance.
+      var landing = new T.Group(); landing.name = 'West exit landing';
+      landing.userData.keep = true;
+      var deck = new T.MeshStandardMaterial({ color: 0x263746, metalness: .24, roughness: .72 });
+      var edgeMat = new T.MeshStandardMaterial({ color: 0x4fc8f5, emissive: 0x0875a6, emissiveIntensity: 1.2 });
+      function part(geometry, material, x, y, z) {
+        var mesh = new T.Mesh(geometry, material); mesh.position.set(x,y,z); landing.add(mesh); return mesh;
+      }
+      part(new T.BoxGeometry(7.3, .16, width * 2), deck, exit.x - 3.45, exit.y - .08, exit.z);
+      [-1,1].forEach(function (side) {
+        var z = exit.z + side * (width - .12);
+        part(new T.BoxGeometry(7.2, .09, .14), edgeMat, exit.x - 3.45, exit.y + .045, z);
+        part(new T.BoxGeometry(7.2, .07, .07), deck, exit.x - 3.45, exit.y + .86, z);
+        [0,2.25,4.5,6.9].forEach(function (offset) {
+          part(new T.BoxGeometry(.10,.9,.10),deck,exit.x-offset,exit.y+.45,z);
+        });
+      });
+      part(new T.BoxGeometry(.11,.80,width*2),deck,exit.x-7.02,exit.y+.40,exit.z);
+      var board = document.createElement('canvas'); board.width = 512; board.height = 96;
+      var ctx = board.getContext('2d');
+      ctx.fillStyle = '#142230'; ctx.fillRect(0,0,512,96);
+      ctx.fillStyle = '#5bdeff'; ctx.fillRect(0,0,6,96); ctx.fillRect(506,0,6,96);
+      ctx.font = 'bold 47px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#e1f8ff'; ctx.fillText('WEST EXIT',256,50);
+      var texture = new T.CanvasTexture(board); texture.colorSpace = T.SRGBColorSpace;
+      var sign = part(new T.PlaneGeometry(3.4*scale,.62*scale),
+        new T.MeshBasicMaterial({ map: texture, toneMapped:false }),
+        root.position.x - 31.72*scale, root.position.y + 4.70*scale, exit.z);
+      sign.rotation.y = Math.PI/2;
+      scene.add(landing);
     }
     var RING_D = (R + 1.6 + RO - 1.3) / 2;
     function placeOnRing(root, info, want, width, dist, exact, placeId) {
@@ -4351,7 +4594,7 @@
         var occupiedSeat = SEALED && SUITES[w] && SUITES[w].seat;
         if (occupiedSeat) a.pos.set(occupiedSeat[0], 0, occupiedSeat[2]);
         else keepOut(a.pos);
-        a.obj.position.x = a.pos.x; a.obj.position.z = a.pos.z; if (w === 'ghost') shadow.position.set(a.pos.x, .125, a.pos.z);
+        if (occupiedSeat && SUITES[w].hostMount) { a.obj.position.copy(SUITES[w].hostMount); a.obj.rotation.y = SUITES[w].hostAngle; } else { a.obj.position.x = a.pos.x; a.obj.position.z = a.pos.z; } if (w === 'ghost') shadow.position.set(a.pos.x, .125, a.pos.z);
         if (a.b.sp.visible && (t > a.b.until || !out)) a.b.sp.visible = false;
         if (a.b.sp.visible) { var bd = Math.hypot(camera.position.x - a.pos.x, camera.position.z - a.pos.z), bs = Math.max(1.3, Math.min(4.6, bd * .3)); a.b.sp.scale.set(bs, bs * .262, 1); a.b.sp.position.y = 2.6 + bs * .24; }      /* a bubble is the same size on screen near or far, never a wall of text in your face */
         if (!out) { a.anger = 0; a.angry = false; return; }
@@ -4602,7 +4845,7 @@
       if (mfLast && Date.now() - mfAt < 8000) coreSay(mfLast);
     }
     ['pointerdown', 'keydown', 'touchend'].forEach(function (ev) { stage.addEventListener(ev, unlockAudio, { passive: true }); });
-    function streamSound() { Object.keys(vids || {}).forEach(function (k) { var v = vids[k]; try { if (v.player) { v.player.setMuted(!(audioOn && !soundMuted)); v.player.setVolume(.8); } } catch (e) {} }); }
+    function streamSound() { Object.keys(vids || {}).forEach(function (k) { var v = vids[k]; try { if (v.player) { v.player.setMuted(v.auxiliary || !(audioOn && !soundMuted)); v.player.setVolume(.8); } } catch (e) {} }); }
     function duck(on) { Object.keys(vids || {}).forEach(function (k) { try { if (vids[k].player && audioOn && !soundMuted) vids[k].player.setVolume(on ? .25 : .8); } catch (e) {} }); }
     // CORE's voice: its own synthesized data-voice, made in the browser (not the device's speech voice). A short chime, then
     // a low filtered pulse for every syllable of the line, so it "talks" in rhythm with the text. Glitch lines drop and stutter.
@@ -5043,11 +5286,15 @@
       rigScreens.forEach(function (r, n) { var sm = rigStream(n); if (sm && r.on) out.push({ id: 'rig' + n, mesh: r.mesh, sm: sm, u: [0, 1] }); });
       // the streaming arena (README-ADMIN 262): the live rig's centre screen, the live side's big wall screen, and the jumbotron's live faces
       if (SEALED) {
-        var stx = (world.extra || {}).stream || {};
         Object.keys(SUITES || {}).forEach(function (w) { var su = SUITES[w], sm = sideStream(w); if (sm && su.scr && su.scr.stream) out.push({ id: 'suite-' + w, mesh: su.scr.stream.mesh, sm: sm, u: [0, 1], quad: true, noOcc: true, prio: inSuite === w ? 1000 : 1 }); });
-        Object.keys(WALLS || {}).forEach(function (w) { var sm = sideStream(w); if (sm) out.push({ id: 'bigwall-' + w, mesh: WALLS[w].mesh, sm: sm, u: [0, 1], quad: true }); });
+        Object.keys(WALLS || {}).forEach(function (w) { var sm = sideStream(w); if (sm) out.push({ id: 'bigwall-' + w, mesh: WALLS[w].mesh, sm: sm, u: [0, 1], quad: true, auxiliary: true }); });
         boothScr.forEach(function (sc) { var sm = sc.role === 'stream' && sc.side === boothSide ? sideStream(sc.side) : null; if (sm) out.push({ id: 'booth-' + sc.side + sc.desk, mesh: sc.mesh, sm: sm, u: [0, 1], quad: true, noOcc: true, prio: inBooth && sc.desk === 1 ? 1000 : 1 }); });
-        var js = liveStream(); if (js) arenaFaces.slice(0, 2).forEach(function (f, n) { out.push({ id: 'jface' + n, mesh: f, sm: js, u: [0, 1] }); });
+        var js = arenaJumboPanes();
+        arenaFaces.forEach(function (face,index) {
+          js.forEach(function (pane) {
+            out.push({ id:'jface'+index+'-'+pane.side, mesh:face, sm:pane.stream, u:pane.u, v:pane.v, prio:8, projected:true });
+          });
+        });
       }
       return out;
     }
@@ -5065,7 +5312,7 @@
         vidScreens().forEach(function (s) {
           for (var vo = s.mesh; vo; vo = vo.parent) if (!vo.visible) return;      // hidden screens (the old town's) never get the player
           var pts = [], ok = true, wc4 = s.quad ? quadCorners(s) : null;
-          if (!wc4) { var p = s.mesh.geometry.parameters, hw = p.width / 2, hh = p.height / 2, x0 = -hw + p.width * s.u[0], x1 = -hw + p.width * s.u[1]; wc4 = [[x0, hh], [x1, hh], [x0, -hh], [x1, -hh]].map(function (c) { return s.mesh.localToWorld(new T.Vector3(c[0], c[1], .02)); }); }
+          if (!wc4) { var p = s.mesh.geometry.parameters, hw = p.width / 2, hh = p.height / 2, x0 = -hw + p.width * s.u[0], x1 = -hw + p.width * s.u[1]; var v = s.v || [0,1], y0 = hh - p.height*v[0], y1 = hh - p.height*v[1]; wc4 = [[x0, y0], [x1, y0], [x0, y1], [x1, y1]].map(function (c) { return s.mesh.localToWorld(new T.Vector3(c[0], c[1], .02)); }); }
           wc4.forEach(function (v) { var cam = v.clone().applyMatrix4(camera.matrixWorldInverse); if (cam.z > -.3) ok = false; v.project(camera); pts.push([(v.x + 1) / 2 * cw, (1 - v.y) / 2 * ch]); });
           if (!ok) return; var area = Math.abs((pts[1][0] - pts[0][0]) * (pts[2][1] - pts[0][1]) - (pts[2][0] - pts[0][0]) * (pts[1][1] - pts[0][1]));
           var front = s.quad ? 1 : s.mesh.localToWorld(new T.Vector3(0, 0, 1)).sub(s.mesh.localToWorld(new T.Vector3(0, 0, 0))).dot(camera.position.clone().sub(s.mesh.getWorldPosition(new T.Vector3())));
@@ -5081,7 +5328,7 @@
         cands.sort(function (a, b) { return b.area - a.area; });
         var byLogin = {}, order = [];
         cands.forEach(function (c) {
-          var lg = c.s.sm.login, oc = occl[c.s.id];
+          var lg = c.s.sm.login + (c.s.auxiliary ? ':' + c.s.id : ''), oc = occl[c.s.id];
           if (c.s.noOcc) oc = { t: t, blocked: false };      // the rig's own wheel and frame sit in front of its screen: never a reason to hide it
           else if (!oc || t - oc.t > .25) {
             var mid = c.s.quad ? c.s.qmid.clone() : c.s.mesh.localToWorld(new T.Vector3(0, 0, .35)), dir = mid.clone().sub(camera.position), dist = dir.length(); vRay.set(camera.position, dir.normalize()); vRay.far = dist - .4; vRay.camera = camera;
@@ -5097,14 +5344,14 @@
           var c = byLogin[lg], v = vids[lg];
           if (!v) {
             var box2 = document.createElement('div'); box2.className = 'igw-vid'; vidLayer.appendChild(box2);
-            v = vids[lg] = { el: box2, login: lg, seen: t, player: null, screen: '', born: t, flat: !TOUCHY, playing: false };
-            makePlayer(v, lg);
+            v = vids[lg] = { el: box2, login: c.s.sm.login, auxiliary: !!c.s.auxiliary, seen: t, player: null, screen: '', born: t, flat: !TOUCHY && !c.s.projected, playing: false };
+            makePlayer(v, v.login);
           }
           v.seen = t; v.screen = c.s.id;
           var st2 = v.el.style; st2.width = VW + 'px'; st2.height = VH + 'px';
           // On a computer a player may only start itself while it is flat and whole, so it starts flat over the middle of
           // its screen and is glued onto the screen once it is playing (or after a few seconds).
-          if (v.flat && !v.playing && t - v.born < 6) { var mx = (c.pts[0][0] + c.pts[1][0] + c.pts[2][0] + c.pts[3][0]) / 4, my = (c.pts[0][1] + c.pts[1][1] + c.pts[2][1] + c.pts[3][1]) / 4; st2.transform = 'translate(' + Math.round(Math.max(0, Math.min(cw - VW, mx - VW / 2))) + 'px,' + Math.round(Math.max(0, Math.min(ch - VH, my - VH / 2))) + 'px)'; }
+          if (!c.s.projected && v.flat && !v.playing && t - v.born < 6) { var mx = (c.pts[0][0] + c.pts[1][0] + c.pts[2][0] + c.pts[3][0]) / 4, my = (c.pts[0][1] + c.pts[1][1] + c.pts[2][1] + c.pts[3][1]) / 4; st2.transform = 'translate(' + Math.round(Math.max(0, Math.min(cw - VW, mx - VW / 2))) + 'px,' + Math.round(Math.max(0, Math.min(ch - VH, my - VH / 2))) + 'px)'; }
           else { v.flat = false; st2.transform = homography(c.pts); }
           st2.visibility = 'visible'; st2.pointerEvents = 'auto'; shown[lg] = true;
         });
@@ -5113,11 +5360,13 @@
       Object.keys(vids).forEach(function (lg) {
         var v = vids[lg]; if (shown[lg]) return;
         v.el.style.visibility = 'hidden'; v.el.style.pointerEvents = 'none'; v.screen = '';     /* kept running out of sight, so it is still playing when you look back */
-        if (t - v.seen > 300 || !vidOn || !liveNow[lg]) { v.gone = true; v.el.remove(); delete vids[lg]; }
+        if (t - v.seen > 300 || !vidOn || !liveNow[v.login]) { v.gone = true; v.el.remove(); delete vids[lg]; }
       });
     }
     var occl = {}, TOUCHY = (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) || 'ontouchstart' in window;
-    function allLive() { return sideStreams('iso').concat(sideStreams('gs')); }
+    function allLive() {
+      return sideStreams('iso').concat(sideStreams('gs'), [sideStream('ghost'),sideStream('echo')].filter(Boolean));
+    }
     var vidBtn = el('button', 'igw-vid-btn', vidOn ? 'Screens on' : 'Screens off'); vidBtn.type = 'button'; vidBtn.setAttribute('aria-pressed', vidOn ? 'true' : 'false');
     vidBtn.addEventListener('click', function (e) { e.stopPropagation(); vidOn = !vidOn; try { localStorage.setItem('igw_vids', vidOn ? '1' : '0'); } catch (e2) {} vidBtn.textContent = vidOn ? 'Screens on' : 'Screens off'; vidBtn.setAttribute('aria-pressed', vidOn ? 'true' : 'false'); vidTick(elapsed); });
     ['pointerdown', 'pointerup'].forEach(function (ev) { vidBtn.addEventListener(ev, function (e) { e.stopPropagation(); }); });
@@ -5140,7 +5389,7 @@
         try {
           var id = 'igwv' + Math.random().toString(36).slice(2); v.el.id = id;
           v.player = new window.Twitch.Player(id, { channel: login, width: '100%', height: '100%', parent: [location.hostname], muted: true, autoplay: true });
-          v.player.addEventListener(window.Twitch.Player.READY, function () { try { v.player.setMuted(!(audioOn && !soundMuted)); v.player.setVolume(.8); v.player.play(); } catch (e) {} });
+          v.player.addEventListener(window.Twitch.Player.READY, function () { try { v.player.setMuted(v.auxiliary || !(audioOn && !soundMuted)); v.player.setVolume(.8); v.player.play(); } catch (e) {} });
           v.player.addEventListener(window.Twitch.Player.PLAYING, function () { v.playing = true; });
         } catch (e) { v.el.textContent = ''; plainPlayer(v, login); }
       });
