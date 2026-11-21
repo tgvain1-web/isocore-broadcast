@@ -1,0 +1,177 @@
+/* ISOCORE BROADCAST: transparent 1920x1080 Xsolla Code layer.
+   Do not combine with an earlier Isocore Code layer. */
+html,body {
+  margin:0!important; padding:0!important;
+  width:100%!important; height:100%!important;
+  overflow:hidden!important; background:transparent!important;
+}
+*,*::before,*::after { box-sizing:border-box; }
+#isocore-broadcast {
+  position:fixed!important; inset:0!important;
+  width:100%!important; height:100%!important;
+  overflow:hidden!important; background:transparent!important;
+  pointer-events:none!important; z-index:3!important;
+  font-family:Arial,sans-serif;
+}
+#isocore-broadcast #iso-camera {
+  position:absolute!important; top:12%!important; right:2.8%!important;
+  bottom:auto!important; left:auto!important;
+  width:26.041667%!important; height:26.018519%!important;
+  max-width:none!important; max-height:none!important;
+  min-height:0!important; aspect-ratio:auto!important;
+  border:2px solid #44ceff!important; border-radius:8px!important;
+  overflow:hidden!important; isolation:isolate!important;
+  background:#081522!important;
+  box-shadow:0 9px 25px #000a,0 0 24px #26baff30!important;
+  opacity:1; transition:opacity .3s;
+}
+#isocore-broadcast #iso-camera.echo {
+  border-color:#ff9a2e!important;
+  box-shadow:0 9px 25px #000a,0 0 24px #ff9a2e30!important;
+}
+#isocore-broadcast.isocore-camera-booting #iso-camera { opacity:0!important; }
+#isocore-broadcast #igwHomeSlot,
+#isocore-broadcast #iso-camera .igw-wrap,
+#isocore-broadcast #iso-camera .igw-world,
+#isocore-broadcast #iso-camera .igw-canvas {
+  position:absolute!important; inset:0!important;
+  display:block!important; width:100%!important; height:100%!important;
+  min-height:0!important; max-height:none!important;
+  margin:0!important; padding:0!important;
+}
+#isocore-broadcast #iso-camera .igw-canvas {
+  filter:brightness(1.10) saturate(1.04);
+}
+#isocore-broadcast #iso-camera-label {
+  position:absolute!important; bottom:5px!important; left:6px!important;
+  top:auto!important; right:auto!important;
+  max-width:calc(100% - 12px)!important;
+  padding:3px 6px!important; z-index:12!important;
+  color:#e9faff!important; background:#071421dd!important;
+  border:1px solid #5ccfff80!important; border-radius:3px!important;
+  font:800 10px/1.15 Arial,sans-serif!important;
+  letter-spacing:.07em!important; white-space:nowrap!important;
+  overflow:hidden!important;
+}
+#isocore-broadcast #iso-camera.echo #iso-camera-label { border-color:#ff9a2e90!important; }
+#isocore-broadcast .igw-hud,
+#isocore-broadcast .igw-controls,
+#isocore-broadcast .igw-ui,
+#isocore-broadcast .igw-menu,
+#isocore-broadcast .igw-card,
+#isocore-broadcast .igw-stats,
+#isocore-broadcast .igw-guide,
+#isocore-broadcast .igw-cams,
+#isocore-broadcast .igw-stick,
+#isocore-broadcast .igw-portal,
+#isocore-broadcast .igw-precover,
+#isocore-broadcast .igw-materialise,
+#isocore-broadcast .igw-fallback,
+#isocore-broadcast .igw-mf,
+#isocore-broadcast [aria-label="Loading the arena"] {
+  display:none!important;
+}
+/* The existing caption handler positions itself directly below the camera. */
+#isocore-broadcast #iso-stream-subtitle {
+  position:absolute!important;
+  top:calc(12% + 26.018519% + 8px)!important;
+  bottom:auto!important; left:auto!important; right:2.8%!important;
+  width:26.041667%!important; max-height:56px!important;
+  padding:6px 8px!important; margin:0!important;
+  display:flex!important; gap:6px!important;
+  color:#f1f8ff!important; background:#061320eb!important;
+  border:1px solid #42cfff66!important;
+  border-left:3px solid #43d3ff!important; border-radius:6px!important;
+  box-shadow:0 5px 18px #0009!important;
+  font:600 10.5px/1.25 Arial,sans-serif!important;
+  pointer-events:none!important; z-index:13!important;
+}
+#isocore-broadcast #iso-stream-subtitle[hidden] { display:none!important; }
+#isocore-broadcast #iso-stream-subtitle[data-who="echo"] {
+  border-color:#ff9a2e77!important; border-left:3px solid #ff9a2e!important;
+}
+#isocore-broadcast #iso-stream-subtitle .who {
+  flex:none; color:#5cdcff; font-weight:900; white-space:nowrap;
+}
+#isocore-broadcast #iso-stream-subtitle[data-who="echo"] .who { color:#ffbb78; }
+#isocore-broadcast #iso-stream-subtitle .line {
+  min-width:0; display:-webkit-box!important;
+  -webkit-box-orient:vertical!important; -webkit-line-clamp:2!important;
+  overflow:hidden!important; overflow-wrap:anywhere;
+}
+#iso-brand {
+  position:fixed; top:2.6%; left:2.5%; z-index:20;
+  display:flex; align-items:center; gap:11px;
+  padding:8px 12px 8px 8px; background:#061423db;
+  border:1px solid #4c71866c; border-radius:8px;
+  box-shadow:0 6px 20px #0007;
+  font-family:Arial,sans-serif; color:#eaf7ff; pointer-events:none;
+}
+#iso-brand .iso-mark {
+  display:grid; place-items:center; width:48px; height:42px;
+  border-radius:5px; font:italic 950 25px Arial,sans-serif;
+  color:white; letter-spacing:-2px;
+  background:linear-gradient(140deg,#1b81b6,#08162b 70%);
+  border:1px solid #65d2ff8c; text-shadow:0 0 10px #2dc7ff99;
+}
+#iso-brand .iso-brand-copy strong {
+  display:block; white-space:nowrap; font:900 19px/1.15 Arial,sans-serif;
+  letter-spacing:.10em;
+}
+#iso-brand .iso-brand-copy strong span { color:#65d4ff; }
+#iso-brand .iso-brand-copy small {
+  display:block; max-width:420px; margin-top:3px;
+  overflow:hidden; white-space:nowrap; text-overflow:ellipsis;
+  color:#b9d0dd; font:700 10px/1.3 Arial,sans-serif;
+  letter-spacing:.10em;
+}
+#iso-live {
+  margin-left:8px; align-items:center; gap:6px;
+  color:white; font:900 11px Arial,sans-serif;
+}
+#iso-live:not([hidden]) { display:flex; }
+#iso-live[hidden] { display:none!important; }
+#iso-live i { width:8px;height:8px;border-radius:50%;background:#ff484e;box-shadow:0 0 10px #f34; }
+#iso-tug {
+  position:fixed; top:3%; left:50%; transform:translateX(-50%);
+  z-index:14; align-items:center; gap:9px;
+  padding:8px 11px; color:white; background:#061321c9;
+  border:1px solid #48718970; border-radius:7px;
+  pointer-events:none; font-family:Arial,sans-serif; box-shadow:0 5px 16px #0008;
+}
+#iso-tug:not([hidden]) { display:flex; }
+#iso-tug[hidden] { display:none!important; }
+.iso-tug-name { font:900 12px Arial,sans-serif; white-space:nowrap; letter-spacing:.05em; }
+.iso-tug-name span { font-size:9px; opacity:.8; }
+.iso-tug-name.ghost { color:#67dcff; }
+.iso-tug-name.echo { color:#ffb669; }
+.iso-tug-track {
+  position:relative; width:140px; height:8px; border-radius:10px;
+  overflow:hidden; background:linear-gradient(90deg,#176e94,#22394a 50%,#9f551d);
+}
+#iso-tug-lean {
+  position:absolute; top:0; bottom:0; left:50%; width:0;
+  background:#fff; transition:left .5s,width .5s,background .5s;
+}
+.iso-tug-mid { position:absolute;top:0;bottom:0;left:50%;width:2px;background:#fff7; }
+#iso-event {
+  position:fixed; top:15%; left:50%; transform:translateX(-50%);
+  z-index:30; max-width:55%; padding:11px 20px;
+  color:#f9fcff; background:#081624f0; border:1px solid #52c8ff;
+  border-radius:8px; font:800 22px Arial,sans-serif;
+  text-align:center; text-shadow:0 2px 3px #000; pointer-events:none;
+}
+#iso-event[hidden] { display:none!important; }
+#iso-domain {
+  position:fixed; bottom:2.4%; left:2.8%; z-index:15;
+  color:#d5ebf8; font:800 18px/1 Arial,sans-serif;
+  letter-spacing:.08em; text-shadow:0 2px 7px #000;
+  pointer-events:none;
+}
+#isocore-broadcast #iso-diag {
+  position:absolute; right:2.8%; top:43%; z-index:30;
+  max-width:26%; padding:7px 10px; border:1px solid #ef6f75;
+  color:#ffe4e4; background:#180c14e8; font:700 11px Arial,sans-serif;
+}
+#isocore-broadcast #iso-diag[hidden] { display:none!important; }
+/* Leave the lower-right quadrant unoccupied for the Lightstream watermark. */

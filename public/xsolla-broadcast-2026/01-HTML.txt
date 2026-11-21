@@ -1,0 +1,23 @@
+<!-- ISOCORE BROADCAST | LIVE GAMEPLAY COMPOSITE | 1920 x 1080 -->
+<main id="isocore-broadcast" aria-label="Isocore Broadcast 3D camera overlay">
+  <div id="iso-camera" class="ghost">
+    <div id="igwHomeSlot"></div>
+    <div id="iso-camera-label">GHOST // STREAMER CAM</div>
+  </div>
+  <div id="iso-diag" role="status" hidden></div>
+</main>
+<div id="iso-brand" aria-label="Isocore Broadcast">
+  <div class="iso-mark">IG</div>
+  <div class="iso-brand-copy">
+    <strong>ISOCORE <span>BROADCAST</span></strong>
+    <small id="iso-game">GHOST / ECHO · GAMEPLAY</small>
+  </div>
+  <div id="iso-live" hidden><i></i> LIVE</div>
+</div>
+<div id="iso-tug" aria-label="Live Ghost versus Echo voting" hidden>
+  <div class="iso-tug-name ghost">GHOST <span>!ghost</span></div>
+  <div class="iso-tug-track"><div id="iso-tug-lean"></div><div class="iso-tug-mid"></div></div>
+  <div class="iso-tug-name echo"><span>!echo</span> ECHO</div>
+</div>
+<div id="iso-event" role="status" hidden></div>
+<div id="iso-domain">isocoregaming.co.uk</div>
