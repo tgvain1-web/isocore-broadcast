@@ -22,3 +22,19 @@ html,body{margin:0!important;width:100%;height:100%;overflow:hidden!important;ba
  #iso-review #iso-review-views{bottom:7px;gap:4px;padding:5px}
  #iso-review #iso-review-views button{padding:8px;font-size:9px}
 }
+
+/* Inspection mode: hide the old in-world overlays; camera buttons remain. */
+#iso-review .igw-hud,
+#iso-review .igw-card,
+#iso-review .igw-ui,
+#iso-review .igw-controls,
+#iso-review .igw-guide,
+#iso-review .igw-stats,
+#iso-review .igw-live-stats,
+#iso-review .igw-map,
+#iso-review .igw-hud-actions,
+#iso-review .igw-cams,
+#iso-review .igw-portal,
+#iso-review .igw-fallback {
+  display: none !important;
+}
