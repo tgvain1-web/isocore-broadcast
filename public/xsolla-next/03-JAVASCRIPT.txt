@@ -7,7 +7,7 @@
   const status=document.getElementById("iso-review-status");
   if(!root||root.dataset.reviewBooted)return;
   root.dataset.reviewBooted="1";
-  let desired=["ghost","wide"], ready=false, stopped=false;
+  let desired=["ghost","stage-front"], ready=false, stopped=false;
   document.body.classList.add("isocore-lightstream","isocore-next-world");
   function say(msg){if(status)status.textContent=msg;}
   function load(path){
@@ -30,15 +30,28 @@
     });
     updateCamera();
   }
+  // 16:9 Isocore stage at the origin, equipment at x=-16 and +16.
+  // The review camera is intentionally independent of the live broadcast framing.
+  const CAMERA_VIEWS = {
+    "stage-front": [0, 11.5, 28, 0, 2.4, 0],
+    "stage-back":  [0, 11.5, -28, 0, 2.4, 0],
+    "high":        [0, 18, 20, 0, 11.5, 0]
+  };
+  let lastCameraKey="";
   function updateCamera(){
     const stage=document.getElementById("ig-ghost-world");
     const engine=stage&&stage._igw;
     if(!engine||typeof engine.broadcast!=="function")return;
+    const who=desired[0],shot=desired[1],cam=CAMERA_VIEWS[shot];
+    const key=who+":"+shot;
+    if(ready&&lastCameraKey===key)return;
     try{
-      if(engine.broadcast(desired[0],desired[1])){
-        ready=true;
-        say("Camera ready · review models selected, fallback enabled");
-      }
+      // Enter the existing world suite to ensure both rigs and avatars are visible.
+      if(!engine.broadcast(who,cam?"wide":shot))return;
+      if(typeof engine.filmCam==="function")engine.filmCam(cam||null);
+      ready=true;lastCameraKey=key;
+      say(cam ? ("Showing "+shot.replace("-"," ").toUpperCase()+" · 1920×1080 REVIEW") :
+        ("Showing "+who.toUpperCase()+" · 1920×1080 REVIEW"));
     }catch(e){say("Camera error: "+e.message);}
   }
   document.querySelectorAll("#iso-review-views button").forEach(btn=>{
@@ -56,7 +69,7 @@
       root.innerHTML='<div id="iso-camera"><div id="igwHomeSlot"></div><div id="iso-camera-label"></div></div><div id="iso-overlay-shell"></div><div id="iso-diag"></div>';
       document.getElementById("igwHomeSlot").innerHTML=window.ISOCORE_BROADCAST_STAGE;
       await load("assets/ig-ghost-world-next.js");
-      choose("ghost","wide");
+      choose("ghost","stage-front");
       let attempts=0;
       const poll=setInterval(()=>{
         if(stopped){clearInterval(poll);return;}

@@ -6,7 +6,8 @@
     <span>Ghost · Echo · Stage · Jumbotron</span>
   </header>
   <nav id="iso-review-views" aria-label="Camera views">
-    <button type="button" data-who="ghost" data-shot="wide">FULL STAGE</button>
+    <button type="button" data-who="ghost" data-shot="stage-front">STAGE FRONT</button>
+    <button type="button" data-who="ghost" data-shot="stage-back">STAGE BACK</button>
     <button type="button" data-who="ghost" data-shot="first">GHOST</button>
     <button type="button" data-who="echo" data-shot="first">ECHO</button>
     <button type="button" data-who="ghost" data-shot="high">JUMBOTRON</button>

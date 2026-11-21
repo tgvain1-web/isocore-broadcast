@@ -6,7 +6,7 @@ const html=readFileSync('public/xsolla-next/01-HTML.txt','utf8');
 const css=readFileSync('public/xsolla-next/02-CSS.txt','utf8');
 const js=readFileSync('public/xsolla-next/03-JAVASCRIPT.txt','utf8');
 test('Xsolla preview has 4 selectable cameras',()=>{
- for(const text of ['FULL STAGE','GHOST','ECHO','JUMBOTRON'])assert.ok(html.includes(text));
+ for(const text of ['STAGE FRONT','STAGE BACK','GHOST','ECHO','JUMBOTRON'])assert.ok(html.includes(text));
  assert.match(html,/id="isocore-broadcast"/);
 });
 test('Xsolla preview isolated from live Vain overlay',()=>{
@@ -19,5 +19,7 @@ test('Xsolla preview loads staged engine and no draft source fetch',()=>{
  assert.match(js,/ig-ghost-world-next\.js/);
  assert.match(js,/assets\/stage\.js/);
  assert.match(js,/cdn\.jsdelivr\.net/);
- assert.match(js,/models selected, fallback enabled/);
+ assert.match(js,/CAMERA_VIEWS/);
+ assert.match(js,/filmCam/);
+ assert.match(js,/1920×1080 REVIEW/);
 });
