@@ -1,0 +1,142 @@
+/* ISOCORE BROADCAST — Xsolla 1920x1080
+   Latest merged model set: 21 November 2026.
+   Private tokens never belong in browser/Xsolla code.
+   Uses pinned public GLB/Three.js assets and the live Cloudflare Worker API.
+*/
+(function(){
+  "use strict";
+  const ASSETS="https://cdn.jsdelivr.net/gh/tgvain1-web/isocore-broadcast@408870b9b902c25ba9f216f55d67877050c9b42b/public/";
+  const API="https://isocore-broadcast.tgvain1.workers.dev";
+  const root=document.getElementById("isocore-broadcast");
+  if(!root || root.dataset.isoBooted==="1")return;
+  root.dataset.isoBooted="1";
+  document.body.classList.add("isocore-lightstream");
+  root.classList.add("isocore-camera-booting");
+
+  const diagnostic=document.getElementById("iso-diag");
+  const label=document.getElementById("iso-camera-label");
+  const cameraBox=document.getElementById("iso-camera");
+  let ready=false,booted=false,lastCamera="",lastAlert=0;
+  let state={who:"ghost",shot:"first"};
+
+  function failure(message){
+    console.error("[ISOCORE]",message);
+    if(diagnostic){diagnostic.textContent="ISOCORE // "+message;diagnostic.hidden=false;}
+  }
+  function script(path){
+    return new Promise((resolve,reject)=>{
+      const el=document.createElement("script");
+      el.src=ASSETS+path;
+      el.onload=resolve;
+      el.onerror=()=>reject(Error("Cannot load "+path));
+      document.head.appendChild(el);
+    });
+  }
+  function css(path){
+    const el=document.createElement("link");
+    el.rel="stylesheet";el.href=ASSETS+path;
+    document.head.appendChild(el);
+  }
+  async function json(path){
+    const response=await fetch(API+path,{cache:"no-store",credentials:"omit"});
+    if(!response.ok)throw Error("API "+response.status);
+    return response.json();
+  }
+  function applyCamera(){
+    const stage=document.getElementById("ig-ghost-world");
+    const engine=stage&&stage._igw;
+    if(!engine || typeof engine.broadcast!=="function")return;
+    const key=state.who+":"+state.shot;
+    if(ready && key===lastCamera)return;
+    try{
+      if(engine.broadcast(state.who,state.shot)){
+        ready=true;lastCamera=key;
+        root.classList.remove("isocore-camera-booting");
+        if(diagnostic)diagnostic.hidden=true;
+        cameraBox.classList.toggle("echo",state.who==="echo");
+        cameraBox.classList.toggle("ghost",state.who!=="echo");
+        const shot=state.shot==="first"?"STREAMER CAM":
+          state.shot==="high"?"JUMBOTRON CAM":state.shot.toUpperCase()+" CAM";
+        label.textContent=state.who.toUpperCase()+" // "+shot;
+      }
+    }catch(e){failure("Camera: "+e.message);}
+  }
+  function updateTug(t){
+    if(!t || !Number.isFinite(Number(t.v)))return;
+    const pane=document.getElementById("iso-tug");
+    const lean=document.getElementById("iso-tug-lean");
+    const v=Math.max(-100,Math.min(100,Number(t.v)||0));
+    pane.hidden=false;
+    const mid=50+v/2;
+    lean.style.left=(v<0?mid:50)+"%";
+    lean.style.width=(Math.abs(v)/2)+"%";
+    lean.style.background=v<0?"#45ccff":"#ff9a2e";
+    if(t.alert&&Number(t.alert.at)>lastAlert){
+      lastAlert=Number(t.alert.at);
+      // Never replay an old alert from before the overlay was opened.
+      if(Date.now()/1000-lastAlert<15){
+        const el=document.getElementById("iso-event");
+        el.textContent=String(t.alert.text||"").slice(0,160);
+        el.hidden=!el.textContent;
+        clearTimeout(el._timer);
+        el._timer=setTimeout(()=>{el.hidden=true;},8500);
+      }
+    }
+  }
+  async function pollState(){
+    try{
+      const data=await json("/api/state");
+      if(data&&data.ok){
+        if(data.camera){
+          const who=data.camera.who==="echo"?"echo":"ghost";
+          const shot=["first","shoulder","side","wide","high"].includes(data.camera.shot)?
+            data.camera.shot:"first";
+          state={who,shot};
+        }
+        updateTug(data.tug);
+      }
+    }catch(e){
+      // The 3D model still works in default Ghost mode if D1/API is unavailable.
+      if(!ready&&booted)console.warn("[ISOCORE] Live camera state unavailable",e);
+    }
+    applyCamera();
+  }
+  async function pollGame(){
+    try{
+      const ctx=await json("/api/stream-context");
+      if(!ctx||!ctx.ok)return;
+      const title=document.getElementById("iso-game");
+      title.textContent=ctx.game?String(ctx.game).slice(0,54):"GHOST / ECHO · GAMEPLAY";
+      const live=document.getElementById("iso-live");
+      live.hidden=ctx.live!==true;
+    }catch(e){/* Game category is optional; do not guess a game title. */}
+  }
+  async function boot(){
+    try{
+      css("assets/ig-ghost-world.css");
+      await script("assets/stage.js");
+      if(!window.ISOCORE_BROADCAST_STAGE)throw Error("Arena stage unavailable");
+      document.getElementById("igwHomeSlot").innerHTML=window.ISOCORE_BROADCAST_STAGE;
+      // Camera and root already exist when captions are mounted.
+      await script("assets/lightstream-dialogue.js");
+      await script("assets/ig-ghost-world-xsolla.js");
+      booted=true;
+      await pollState();
+      await pollGame();
+      setInterval(pollState,4000);
+      setInterval(pollGame,60000);
+      // The model loader is asynchronous even after its JS file loads.
+      const attempt=setInterval(()=>{
+        if(ready){clearInterval(attempt);return;}
+        applyCamera();
+      },700);
+      setTimeout(()=>{clearInterval(attempt);if(!ready)failure("3D camera unavailable — check model loading/WebGL");},45000);
+    }catch(e){failure(e.message||String(e));}
+  }
+  window.addEventListener("error",e=>{
+    if(/webgl|import|module|cors|script/i.test(e.message||""))
+      failure(e.message);
+  });
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",boot,{once:true});
+  else boot();
+})();
