@@ -1,0 +1,16 @@
+<!-- ISOCORE 3D REVIEW — PRIVATE TEST LAYER, NOT YOUR LIVE VAIN OVERLAY -->
+<div id="iso-review">
+  <main id="isocore-broadcast" aria-label="Ghost and Echo 3D arena review"></main>
+  <header class="iso-review-title">
+    <strong>ISOCORE // NEW WORLD</strong>
+    <span>Ghost · Echo · Stage · Jumbotron</span>
+  </header>
+  <nav id="iso-review-views" aria-label="Camera views">
+    <button type="button" data-who="ghost" data-shot="stage-front">STAGE FRONT</button>
+    <button type="button" data-who="ghost" data-shot="stage-back">STAGE BACK</button>
+    <button type="button" data-who="ghost" data-shot="first">GHOST</button>
+    <button type="button" data-who="echo" data-shot="first">ECHO</button>
+    <button type="button" data-who="ghost" data-shot="high">JUMBOTRON</button>
+  </nav>
+  <div id="iso-review-status" role="status">Loading the new arena…</div>
+</div>
